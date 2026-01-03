@@ -4,7 +4,7 @@ import PasswordVault from './PasswordVault';
 import SplashScreen from './SplashScreen'; 
 import '../App.css';
 
-const ToolCard = ({ icon: Icon, title, desc, onClick, color, glowColor }: any) => (
+const ToolCard = ({ icon: Icon, title, desc, onClick, glowColor }: any) => (
   <div onClick={onClick} className="menu-card" style={{ ['--hover-color' as any]: glowColor }}
     onMouseEnter={(e) => { e.currentTarget.style.boxShadow = `0 15px 30px -10px ${glowColor}40`; e.currentTarget.style.borderColor = glowColor; }}
     onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'; }}
@@ -54,4 +54,5 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
 }
