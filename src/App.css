@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+/* --- FONTE NOVA: OUTFIT (Mais limpa e premium) --- */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* Mantemos a Inter para textos longos pois é imbatível em leitura */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
 /* =========================================
    1. RESET E VARIÁVEIS GLOBAIS
    ========================================= */
@@ -9,432 +13,334 @@
 }
 
 :root {
-  --bg-color: #0f172a;       /* Azul Escuro (Slate 900) */
-  --card-bg: #1e293b;        /* Azul um pouco mais claro (Slate 800) */
-  --text-color: #f8fafc;     /* Branco Gelo */
-  --accent: #8b5cf6;         /* Roxo Principal */
-  --accent-hover: #7c3aed;   /* Roxo mais escuro para hover */
-  --danger: #ef4444;         /* Vermelho */
-  --success: #10b981;        /* Verde */
-  --border: #334155;         /* Cor da borda sutil */
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --text-color: #f8fafc;
+  --accent: #8b5cf6;       
+  --accent-hover: #7c3aed;
+  --danger: #ef4444;
+  --success: #10b981;
+  --border: #334155;
+  --font-display: 'Outfit', sans-serif; /* Fonte para Títulos */
+  --font-body: 'Inter', sans-serif;     /* Fonte para Textos */
 }
 
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body); /* Padrão Inter */
   min-height: 100vh;
   padding: 20px;
+  -webkit-font-smoothing: antialiased; /* Deixa a fonte mais nítida */
 }
 
 .container {
   width: 100%;
-  max-width: 1400px; /* Largura máxima generosa para telas grandes */
+  max-width: 1400px;
   margin: 0 auto;
 }
 
 /* =========================================
-   2. TIPOGRAFIA (ARGUS ONE)
+   2. TIPOGRAFIA (ARGUS ONE - Minimalista)
    ========================================= */
 .dashboard-title {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 2.2rem; /* Levemente menor para ser menos agressivo */
+  font-weight: 700;
   margin-bottom: 0.5rem;
-  background: linear-gradient(90deg, #f8fafc 0%, #94a3b8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -1px;
+  color: white;
+  letter-spacing: -0.5px; /* Tracking negativo fica mais moderno e compacto */
 }
 
 .dashboard-subtitle {
-  color: #64748b;
-  font-size: 1.1rem;
+  color: #94a3b8;
+  font-size: 1rem;
   margin-bottom: 3rem;
+  font-weight: 400;
 }
 
 /* =========================================
-   3. ELEMENTOS BÁSICOS (Botões, Inputs)
+   3. ELEMENTOS BÁSICOS
    ========================================= */
 button {
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 10px; /* Bordas um pouco mais suaves */
   font-weight: 600;
-  transition: 0.2s;
+  transition: all 0.2s ease;
   border: none;
-  font-family: inherit;
+  font-family: var(--font-display); /* Botões usam a fonte moderna */
 }
 
 .btn-primary {
   background-color: var(--accent);
   color: white;
-  padding: 12px 20px;
+  padding: 12px 24px;
   width: 100%;
   font-size: 1rem;
+  letter-spacing: 0.5px;
 }
-.btn-primary:hover:not(:disabled) { background-color: var(--accent-hover); }
+.btn-primary:hover:not(:disabled) { 
+  background-color: var(--accent-hover); 
+  transform: translateY(-1px);
+}
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-danger {
-  background-color: var(--danger);
-  color: white;
-  padding: 12px 20px;
-  font-size: 1rem;
+  background-color: rgba(239, 68, 68, 0.15); /* Fundo transparente vermelho */
+  color: #ef4444;
+  padding: 10px 20px;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
-.btn-danger:hover { background-color: #dc2626; }
+.btn-danger:hover { 
+  background-color: rgba(239, 68, 68, 0.25); 
+  border-color: #ef4444;
+}
 
-/* Botão Tracejado de "Adicionar" */
 .btn-add-placeholder {
   width: 100%;
   padding: 1.5rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 2px dashed #475569;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px dashed #475569; /* Borda mais fina */
   border-radius: 12px;
   color: #94a3b8;
-  font-size: 1.1em;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   margin-bottom: 2rem;
+  font-family: var(--font-display);
 }
 .btn-add-placeholder:hover {
-  background: rgba(30, 41, 59, 1);
+  background: rgba(30, 41, 59, 0.6);
   border-color: var(--accent);
   color: var(--accent);
 }
 
 input {
   width: 100%;
-  padding: 12px;
-  background-color: #020617;
+  padding: 14px;
+  background-color: #0f172a; /* Fundo mais escuro no input */
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   color: white;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 0.95rem;
+  transition: border-color 0.2s;
 }
-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+input:focus { outline: none; border-color: var(--accent); }
+input::placeholder { color: #475569; }
 
 /* =========================================
-   4. COMPONENTES DO COFRE (PasswordVault)
+   4. COFRE DE SENHAS (Grid e Cards)
    ========================================= */
 .card {
   background-color: var(--card-bg);
   padding: 2rem;
-  border-radius: 16px;
+  border-radius: 20px;
   border: 1px solid var(--border);
   margin-bottom: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-.form-actions {
-  display: flex;
-  gap: 15px;
-  margin-top: 15px;
-}
+.form-actions { display: flex; gap: 15px; margin-top: 15px; }
 .form-actions button { flex: 1; }
 
-/* --- GRID DE SENHAS (Onde ficam os Logins) --- */
 .vault-grid {
   display: grid;
   width: 100%;
-  gap: 24px;
-  grid-template-columns: 1fr; /* Mobile: 1 coluna */
+  gap: 20px;
+  grid-template-columns: 1fr;
 }
-
-@media (min-width: 768px) {
-  .vault-grid { grid-template-columns: 1fr 1fr; } /* PC Normal: 2 colunas (Largos) */
-}
-
-@media (min-width: 1280px) {
-  .vault-grid { grid-template-columns: 1fr 1fr 1fr; } /* Tela Gigante: 3 colunas */
-}
+@media (min-width: 768px) { .vault-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1280px) { .vault-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
 .vault-item {
   background-color: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 180px; 
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  min-height: 160px; 
+  transition: all 0.2s ease;
 }
-
-.vault-item:hover {
-  border-color: var(--accent);
-  transform: translateY(-4px);
+.vault-item:hover { 
+  border-color: var(--accent); 
+  transform: translateY(-2px); 
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 /* =========================================
-   5. MENU PRINCIPAL (Argus One Dashboard)
+   5. MENU DASHBOARD (Refinado)
    ========================================= */
-
-/* --- GRID DO MENU --- */
 .dashboard-grid {
   display: grid;
   width: 100%;
-  gap: 30px; 
+  gap: 24px; 
   padding: 10px;
-  grid-template-columns: 1fr; /* Mobile */
+  grid-template-columns: 1fr;
 }
+@media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
 
-@media (min-width: 768px) {
-  .dashboard-grid { grid-template-columns: 1fr 1fr; } /* PC: 2 Colunas */
-}
-
-@media (min-width: 1200px) {
-  .dashboard-grid { grid-template-columns: repeat(3, 1fr); } /* Tela Gigante */
-}
-
-/* --- CARDS DO MENU (Efeito Vidro/Glass) --- */
 .menu-card {
   background: rgba(30, 41, 59, 0.4);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  padding: 30px;
+  border-radius: 24px; /* Mais arredondado */
+  padding: 32px;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   height: 100%; 
-  min-height: 200px;
+  min-height: 220px;
 }
-
 .menu-card:hover {
-  transform: translateY(-8px);
-  background: rgba(30, 41, 59, 0.8);
+  transform: translateY(-5px);
+  background: rgba(30, 41, 59, 0.6);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
 .icon-wrapper {
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   transition: transform 0.3s ease;
 }
+.menu-card:hover .icon-wrapper { transform: scale(1.05); }
 
-.menu-card:hover .icon-wrapper {
-  transform: scale(1.1) rotate(5deg);
+.menu-card h3 { 
+  font-family: var(--font-display);
+  font-size: 1.4rem; 
+  margin: 0; 
+  color: white; 
+  font-weight: 600; 
 }
-
-.menu-card h3 {
-  font-size: 1.5rem;
-  margin: 0;
-  color: white;
-  font-weight: 700;
-}
-
-.menu-card p {
-  margin: 0;
-  color: #94a3b8;
-  line-height: 1.5;
-}
+.menu-card p { margin: 0; color: #94a3b8; line-height: 1.5; font-size: 0.95rem; }
 
 .card-arrow {
-  position: absolute;
-  bottom: 25px;
-  right: 25px;
-  opacity: 0;
-  transform: translateX(-10px);
-  transition: all 0.3s ease;
+  position: absolute; bottom: 32px; right: 32px;
+  opacity: 0; transform: translateX(-10px); transition: all 0.3s ease;
 }
-
-.menu-card:hover .card-arrow {
-  opacity: 1;
-  transform: translateX(0);
-}
+.menu-card:hover .card-arrow { opacity: 1; transform: translateX(0); }
 
 /* =========================================
-   6. EXTRAS (Toast & Strength Meter)
+   6. EXTRAS
    ========================================= */
-
-/* --- TOAST NOTIFICATION --- */
+.toast {
+  position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+  background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+  padding: 12px 24px; border-radius: 50px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); z-index: 9999;
+  animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-weight: 500; border: 1px solid #334155; min-width: 300px; justify-content: center;
+  font-family: var(--font-display);
+}
 @keyframes slideDown {
   from { transform: translate(-50%, -100%); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
 }
-
-.toast {
-  position: fixed;
-  top: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 12px 24px;
-  border-radius: 50px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-  animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  font-weight: 500;
-  border: 1px solid #334155;
-  min-width: 300px;
-  justify-content: center;
-}
-
 .toast.success { border-color: #10b981; color: #f8fafc; }
 .toast.success svg { color: #10b981; }
 .toast.error { border-color: #ef4444; color: #f8fafc; }
 .toast.error svg { color: #ef4444; }
 
-/* --- MEDIDOR DE FORÇA DA SENHA --- */
+/* Medidor de Força */
 .strength-meter-container {
-  height: 4px;
-  width: 100%;
-  background-color: #334155;
-  border-radius: 2px;
-  margin-top: 8px;
-  overflow: hidden;
+  height: 4px; width: 100%; background-color: #334155;
+  border-radius: 2px; margin-top: 8px; overflow: hidden;
 }
-
 .strength-meter-fill {
-  height: 100%;
-  width: 0%;
-  border-radius: 2px;
+  height: 100%; width: 0%; border-radius: 2px;
   transition: width 0.3s ease, background-color 0.3s ease;
 }
-
 .strength-weak { width: 33%; background-color: #ef4444; }
 .strength-medium { width: 66%; background-color: #f59e0b; }
 .strength-strong { width: 100%; background-color: #10b981; }
-
-.strength-text {
-  font-size: 0.75rem;
-  margin-top: 4px;
-  text-align: right;
-  font-weight: 600;
-}
+.strength-text { font-size: 0.75rem; margin-top: 4px; text-align: right; font-weight: 600; font-family: var(--font-display); }
 
 /* =========================================
-   7. SPLASH SCREEN (ATUALIZADO)
+   7. SPLASH SCREEN (Atualizado para ser mais limpo)
    ========================================= */
-
 .splash-screen-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: #020617; /* Um fundo ainda mais escuro para contraste */
-  background-image: radial-gradient(circle at center, #1e293b 0%, #020617 70%); /* Vignette sutil */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: #020617;
+  /* Gradiente mais sutil */
+  background-image: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   z-index: 10000;
 }
-
 .splash-svg {
-  width: 180px; /* Aumentei um pouco */
-  height: 180px;
-  filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.6)); /* Glow mais forte */
-  margin-bottom: 20px;
+  width: 160px; height: 160px;
+  /* Glow reduzido para ser menos "agressivo" */
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.4)); margin-bottom: 24px;
 }
-
 .splash-path {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1000; 
-  stroke-dashoffset: 1000;
+  fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round;
+  stroke-linejoin: round; stroke-dasharray: 1000; stroke-dashoffset: 1000;
   animation: drawLines 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
+.splash-path-iris { animation-delay: 0.5s; stroke: white; }
+@keyframes drawLines { to { stroke-dashoffset: 0; } }
 
-.splash-path-iris {
-  animation-delay: 0.5s;
-  stroke: white; /* Íris branca para destaque */
-}
-
-@keyframes drawLines {
-  to { stroke-dashoffset: 0; }
-}
-
-/* TÍTULO ESTILIZADO */
 .splash-title-wrapper {
-  font-family: 'Orbitron', sans-serif; /* A fonte tecnológica */
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  margin-top: 1rem;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.8s ease-out 1.8s forwards; /* Aparece depois do desenho */
-  text-align: center;
+  font-family: var(--font-display); 
+  font-size: 3rem; 
+  font-weight: 800;
+  letter-spacing: -1px; /* Letras mais juntas, estilo moderno */
+  text-transform: uppercase; margin-top: 0.5rem;
+  opacity: 0; transform: translateY(20px);
+  animation: fadeInUp 0.8s ease-out 1.8s forwards; text-align: center;
 }
+/* Cores mais sóbrias */
+.text-argus { color: var(--accent); }
+.text-one { color: white; }
 
-/* Cores separadas */
-.text-argus {
-  color: var(--accent); /* Roxo */
-  text-shadow: 0 0 20px rgba(139, 92, 246, 0.4); /* Brilho neon */
-}
-
-.text-one {
-  color: white;
-}
-
-/* Subtítulo */
 .splash-subtitle {
-  font-family: 'Inter', sans-serif;
-  margin-top: 0.5rem;
-  color: #64748b;
-  font-size: 1rem;
-  letter-spacing: 2px;
-  opacity: 0;
-  transform: translateY(20px);
+  font-family: var(--font-display); 
+  margin-top: 0.8rem; color: #64748b;
+  font-size: 0.9rem; letter-spacing: 1px; opacity: 0; transform: translateY(20px);
   animation: fadeInUp 0.8s ease-out 2.0s forwards;
-}
-
-/* BOTÃO DE ENTRAR (PULSANTE) */
-.btn-enter-system {
-  margin-top: 3rem;
-  background: transparent;
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  padding: 12px 30px;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1rem;
-  letter-spacing: 2px;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  opacity: 0; /* Invisível no começo */
-  animation: fadeInUp 0.8s ease-out 2.5s forwards; /* Aparece por último */
 }
 
+.btn-enter-system {
+  margin-top: 3rem; 
+  background: transparent; 
+  border: 1px solid rgba(139, 92, 246, 0.5); /* Borda mais discreta */
+  color: white; 
+  padding: 12px 32px; 
+  font-family: var(--font-display);
+  font-size: 0.9rem; 
+  letter-spacing: 1px; 
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer; transition: all 0.3s ease; opacity: 0;
+  border-radius: 50px; /* Botão pílula é mais amigável */
+  animation: fadeInUp 0.8s ease-out 2.5s forwards;
+}
 .btn-enter-system:hover {
-  background: var(--accent);
+  background: var(--accent); 
+  border-color: var(--accent);
   color: white;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); /* Glow forte no hover */
-  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); 
+  transform: translateY(-2px);
 }
-
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+@keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
