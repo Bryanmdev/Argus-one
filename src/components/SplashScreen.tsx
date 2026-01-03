@@ -1,4 +1,3 @@
-import React from 'react';
 import '../App.css';
 
 interface SplashScreenProps { onFinish: () => void; }
@@ -18,4 +17,5 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
     </div>
   );
 };
+
 export default SplashScreen;
