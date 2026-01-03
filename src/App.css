@@ -1,0 +1,440 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+/* =========================================
+   1. RESET E VARIÁVEIS GLOBAIS
+   ========================================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-color: #0f172a;       /* Azul Escuro (Slate 900) */
+  --card-bg: #1e293b;        /* Azul um pouco mais claro (Slate 800) */
+  --text-color: #f8fafc;     /* Branco Gelo */
+  --accent: #8b5cf6;         /* Roxo Principal */
+  --accent-hover: #7c3aed;   /* Roxo mais escuro para hover */
+  --danger: #ef4444;         /* Vermelho */
+  --success: #10b981;        /* Verde */
+  --border: #334155;         /* Cor da borda sutil */
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 1400px; /* Largura máxima generosa para telas grandes */
+  margin: 0 auto;
+}
+
+/* =========================================
+   2. TIPOGRAFIA (ARGUS ONE)
+   ========================================= */
+.dashboard-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(90deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
+}
+
+.dashboard-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 3rem;
+}
+
+/* =========================================
+   3. ELEMENTOS BÁSICOS (Botões, Inputs)
+   ========================================= */
+button {
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: 0.2s;
+  border: none;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background-color: var(--accent);
+  color: white;
+  padding: 12px 20px;
+  width: 100%;
+  font-size: 1rem;
+}
+.btn-primary:hover:not(:disabled) { background-color: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+  padding: 12px 20px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-danger:hover { background-color: #dc2626; }
+
+/* Botão Tracejado de "Adicionar" */
+.btn-add-placeholder {
+  width: 100%;
+  padding: 1.5rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 2px dashed #475569;
+  border-radius: 12px;
+  color: #94a3b8;
+  font-size: 1.1em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 2rem;
+}
+.btn-add-placeholder:hover {
+  background: rgba(30, 41, 59, 1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  background-color: #020617;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: white;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* =========================================
+   4. COMPONENTES DO COFRE (PasswordVault)
+   ========================================= */
+.card {
+  background-color: var(--card-bg);
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+.form-actions button { flex: 1; }
+
+/* --- GRID DE SENHAS (Onde ficam os Logins) --- */
+.vault-grid {
+  display: grid;
+  width: 100%;
+  gap: 24px;
+  grid-template-columns: 1fr; /* Mobile: 1 coluna */
+}
+
+@media (min-width: 768px) {
+  .vault-grid { grid-template-columns: 1fr 1fr; } /* PC Normal: 2 colunas (Largos) */
+}
+
+@media (min-width: 1280px) {
+  .vault-grid { grid-template-columns: 1fr 1fr 1fr; } /* Tela Gigante: 3 colunas */
+}
+
+.vault-item {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px; 
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.vault-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+}
+
+/* =========================================
+   5. MENU PRINCIPAL (Argus One Dashboard)
+   ========================================= */
+
+/* --- GRID DO MENU --- */
+.dashboard-grid {
+  display: grid;
+  width: 100%;
+  gap: 30px; 
+  padding: 10px;
+  grid-template-columns: 1fr; /* Mobile */
+}
+
+@media (min-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr 1fr; } /* PC: 2 Colunas */
+}
+
+@media (min-width: 1200px) {
+  .dashboard-grid { grid-template-columns: repeat(3, 1fr); } /* Tela Gigante */
+}
+
+/* --- CARDS DO MENU (Efeito Vidro/Glass) --- */
+.menu-card {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 30px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  height: 100%; 
+  min-height: 200px;
+}
+
+.menu-card:hover {
+  transform: translateY(-8px);
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.icon-wrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  transition: transform 0.3s ease;
+}
+
+.menu-card:hover .icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.menu-card h3 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: white;
+  font-weight: 700;
+}
+
+.menu-card p {
+  margin: 0;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.card-arrow {
+  position: absolute;
+  bottom: 25px;
+  right: 25px;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
+}
+
+.menu-card:hover .card-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* =========================================
+   6. EXTRAS (Toast & Strength Meter)
+   ========================================= */
+
+/* --- TOAST NOTIFICATION --- */
+@keyframes slideDown {
+  from { transform: translate(-50%, -100%); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.toast {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 12px 24px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-weight: 500;
+  border: 1px solid #334155;
+  min-width: 300px;
+  justify-content: center;
+}
+
+.toast.success { border-color: #10b981; color: #f8fafc; }
+.toast.success svg { color: #10b981; }
+.toast.error { border-color: #ef4444; color: #f8fafc; }
+.toast.error svg { color: #ef4444; }
+
+/* --- MEDIDOR DE FORÇA DA SENHA --- */
+.strength-meter-container {
+  height: 4px;
+  width: 100%;
+  background-color: #334155;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.strength-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-weak { width: 33%; background-color: #ef4444; }
+.strength-medium { width: 66%; background-color: #f59e0b; }
+.strength-strong { width: 100%; background-color: #10b981; }
+
+.strength-text {
+  font-size: 0.75rem;
+  margin-top: 4px;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* =========================================
+   7. SPLASH SCREEN (ATUALIZADO)
+   ========================================= */
+
+.splash-screen-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #020617; /* Um fundo ainda mais escuro para contraste */
+  background-image: radial-gradient(circle at center, #1e293b 0%, #020617 70%); /* Vignette sutil */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.splash-svg {
+  width: 180px; /* Aumentei um pouco */
+  height: 180px;
+  filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.6)); /* Glow mais forte */
+  margin-bottom: 20px;
+}
+
+.splash-path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1000; 
+  stroke-dashoffset: 1000;
+  animation: drawLines 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.splash-path-iris {
+  animation-delay: 0.5s;
+  stroke: white; /* Íris branca para destaque */
+}
+
+@keyframes drawLines {
+  to { stroke-dashoffset: 0; }
+}
+
+/* TÍTULO ESTILIZADO */
+.splash-title-wrapper {
+  font-family: 'Orbitron', sans-serif; /* A fonte tecnológica */
+  font-size: 3.5rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: 1rem;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.8s ease-out 1.8s forwards; /* Aparece depois do desenho */
+  text-align: center;
+}
+
+/* Cores separadas */
+.text-argus {
+  color: var(--accent); /* Roxo */
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.4); /* Brilho neon */
+}
+
+.text-one {
+  color: white;
+}
+
+/* Subtítulo */
+.splash-subtitle {
+  font-family: 'Inter', sans-serif;
+  margin-top: 0.5rem;
+  color: #64748b;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.8s ease-out 2.0s forwards;
+}
+
+/* BOTÃO DE ENTRAR (PULSANTE) */
+.btn-enter-system {
+  margin-top: 3rem;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 12px 30px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  opacity: 0; /* Invisível no começo */
+  animation: fadeInUp 0.8s ease-out 2.5s forwards; /* Aparece por último */
+}
+
+.btn-enter-system:hover {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); /* Glow forte no hover */
+  transform: scale(1.05);
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

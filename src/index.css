@@ -1,0 +1,68 @@
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* PALETA CYBER-PURPLE */
+  --bg-color: #0f172a;       /* Fundo Azul Noite (bem escuro) */
+  --card-bg: #1e293b;        /* Fundo dos cartões (Cinza Azulado) */
+  
+  --text-main: #f8fafc;      /* Branco para leitura */
+  --text-muted: #94a3b8;     /* Cinza para detalhes */
+  
+  --accent: #8b5cf6;         /* ROXO VIOLETA (A cor principal) */
+  --accent-hover: #7c3aed;   /* Roxo mais intenso para o hover */
+  --accent-glow: rgba(139, 92, 246, 0.5); /* A cor do brilho */
+  
+  --danger: #ef4444;         /* Vermelho para erros */
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center; /* Centraliza tudo verticalmente e horizontalmente */
+  justify-content: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  background-image: radial-gradient(circle at top right, #1e1b4b, transparent 40%); /* Um charme visual no fundo */
+}
+
+/* Inputs Modernos */
+input, button {
+  font-family: inherit;
+  border-radius: 12px; /* Bordas mais arredondadas = mais moderno */
+  border: 1px solid #334155;
+  padding: 0.9em 1.2em;
+  font-size: 1em;
+  transition: all 0.25s ease;
+  background-color: #020617; 
+  color: white;
+  width: 100%; /* Garante que ocupem o espaço */
+  box-sizing: border-box; /* Evita que o padding quebre o layout */
+}
+
+/* Efeito de Foco com Brilho (Glow) */
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-glow); /* O brilho roxo ao redor */
+}
+
+button {
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Links */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #a78bfa; /* Roxo mais claro */
+}
