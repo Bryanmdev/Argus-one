@@ -2,8 +2,9 @@
 
 // Função auxiliar para evitar problemas com caracteres especiais/acentos no btoa
 const toBase64 = (str: string) => {
+    // CORREÇÃO AQUI: Trocamos 'match' por '_' para o TypeScript não reclamar
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-        function toSolidBytes(match, p1) {
+        function toSolidBytes(_, p1) {
             return String.fromCharCode(parseInt(p1, 16));
     }));
 }
@@ -51,8 +52,9 @@ export const decrypt = (encryptedText: string, key: string): string | null => {
     }
     return null; // Senha errada (decriptou lixo)
 
-  } catch (e) {
-    return null; // Erro de formato
+  } catch (_) { 
+    // O underline (_) aqui também evita erro de "variável não usada" no catch
+    return null; 
   }
 };
 
