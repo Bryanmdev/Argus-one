@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { encryptData, decryptData } from '../utils/security';
 import { Trash2, Copy, Lock, Plus, Eye, EyeOff, ShieldCheck, Zap, Search, Pencil, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
@@ -239,7 +239,20 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
   };
 
   const strength = getPasswordStrength(newPass);
-  const filteredItems = items.filter(item => item.site_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  // --- OTIMIZAÇÃO CRÍTICA AQUI ---
+  // Memoriza a lista processada. 
+  // O React só vai rodar a descriptografia se 'items', 'searchTerm' ou 'masterPin' mudarem.
+  // Digitar no campo "Nova Senha" NÃO vai mais travar a tela.
+  const processedItems = useMemo(() => {
+    return items
+        .filter(item => item.site_name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .map(item => ({
+            ...item,
+            decryptedUser: decryptData(item.username_encrypted, masterPin),
+            decryptedPass: decryptData(item.password_encrypted, masterPin)
+        }));
+  }, [items, searchTerm, masterPin]);
 
   if (!isUnlocked) {
     return (
@@ -291,7 +304,6 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
                 <ArrowLeft size={16}/> Voltar
              </button>
             
-            {/* BOTÃO CORRIGIDO: CHAMA handleLock */}
             <button onClick={handleLock} className="btn-danger" style={{ width: 'auto', padding: '8px 16px', fontSize: '0.9rem' }}>
               <Lock size={16} /> Bloquear
             </button>
@@ -333,9 +345,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
       )}
 
       <div className="vault-grid">
-        {filteredItems.map((item) => {
-          const decryptedUser = decryptData(item.username_encrypted, masterPin);
-          const decryptedPass = decryptData(item.password_encrypted, masterPin);
+        {processedItems.map((item) => {
           const isPassVisible = visiblePasswordId === item.id;
           const isEditing = editingId === item.id; 
           return (
@@ -350,17 +360,17 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
                   <button onClick={() => handleDelete(item.id)} style={{ background: 'transparent', padding: 5, color: '#ef4444' }}> <Trash2 size={18} /> </button>
                 </div>
               </div>
-              {decryptedUser ? (
+              {item.decryptedUser ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ background: '#020617', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{decryptedUser}</span>
-                    <Copy size={16} style={{ cursor: 'pointer', color: '#8b5cf6', flexShrink: 0 }} onClick={() => copyToClipboard(decryptedUser!)} />
+                    <span style={{ color: '#94a3b8', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.decryptedUser}</span>
+                    <Copy size={16} style={{ cursor: 'pointer', color: '#8b5cf6', flexShrink: 0 }} onClick={() => copyToClipboard(item.decryptedUser!)} />
                   </div>
                   <div style={{ background: '#020617', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: 'monospace', color: isPassVisible ? '#a78bfa' : '#64748b', fontSize: '0.9em' }}>{isPassVisible ? decryptedPass : '••••••••'}</span>
+                    <span style={{ fontFamily: 'monospace', color: isPassVisible ? '#a78bfa' : '#64748b', fontSize: '0.9em' }}>{isPassVisible ? item.decryptedPass : '••••••••'}</span>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <button onClick={() => setVisiblePasswordId(isPassVisible ? null : item.id)} style={{ background: 'transparent', padding: 0, color: '#94a3b8' }}>{isPassVisible ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                        <Copy size={16} style={{ cursor: 'pointer', color: '#8b5cf6' }} onClick={() => copyToClipboard(decryptedPass!)} />
+                        <Copy size={16} style={{ cursor: 'pointer', color: '#8b5cf6' }} onClick={() => copyToClipboard(item.decryptedPass!)} />
                     </div>
                   </div>
                 </div>
