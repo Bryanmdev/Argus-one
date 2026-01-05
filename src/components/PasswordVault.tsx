@@ -29,7 +29,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [masterPassword, setMasterPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(false); // Novo estado para saber se é o primeiro acesso
+  const [isEmpty, setIsEmpty] = useState(false); 
   
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
 
@@ -39,11 +39,13 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
 
   const checkVaultStatus = async () => {
     const { count } = await supabase.from('vault_items').select('*', { count: 'exact', head: true });
-    // Se count for 0, marcamos como vazio mas NÃO desbloqueamos automaticamente.
-    // O usuário deve digitar a senha que deseja usar como Mestra na tela de bloqueio.
+    
+    // CORREÇÃO AQUI: Se for 0, marcamos como vazio mas NÃO desbloqueamos.
+    // O usuário PRECISA ver a tela de bloqueio para definir a senha.
     if (count === 0) {
       setIsEmpty(true);
     }
+    // Removida a linha setIsUnlocked(true) que causava o erro
     setLoading(false);
   };
 
@@ -53,26 +55,21 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     setLoading(true);
     
     if (isEmpty) {
-        // SE É O PRIMEIRO ACESSO:
-        // Não há o que validar. A senha digitada vira a senha mestra desta sessão.
+        // PRIMEIRO ACESSO: Define a senha mestra da sessão e entra
         setIsUnlocked(true);
-        // (Opcional: Poderíamos salvar um hash da senha mestra no futuro para validar, 
-        // mas por enquanto validamos tentando descriptografar os itens).
     } else {
-        // SE JÁ TEM SENHAS:
-        // Tenta baixar e descriptografar o PRIMEIRO item para validar a senha
+        // USO NORMAL: Valida a senha contra o primeiro item do banco
         const { data, error } = await supabase.from('vault_items').select('*').limit(1);
         
         if (error) {
             alert('Erro de conexão.');
         } else if (!data || data.length === 0) {
-            // Caso raro onde isEmpty falhou, mas não tem dados -> Libera
+            // Caso de borda: Se estava marcado como cheio mas veio vazio
             setIsUnlocked(true);
         } else {
             const testItem = data[0];
             const decrypted = decrypt(testItem.password_encrypted, masterPassword);
             
-            // Se decrypted for diferente de null, a senha está certa (contém o prefixo VALID:)
             if (decrypted !== null) {
                 setIsUnlocked(true);
                 fetchVault();
@@ -98,7 +95,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!masterPassword) { alert('Sessão expirada ou senha mestra não definida. Bloqueie e entre novamente.'); return; }
+    if (!masterPassword) { alert('Sessão expirada. Bloqueie e entre novamente.'); return; }
     
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -116,7 +113,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
             alert('Erro ao salvar: ' + error.message);
         } else {
             setSite(''); setUsername(''); setPassword(''); setIsCreating(false);
-            setIsEmpty(false); // Agora não está mais vazio
+            setIsEmpty(false);
             fetchVault();
         }
     }
@@ -146,39 +143,39 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     );
   }, [vault, searchTerm]);
 
-  // --- TELA DE BLOQUEIO ---
+  // --- TELA DE BLOQUEIO (OU SETUP) ---
   if (!isUnlocked) {
     return (
         <div className="container" style={{paddingTop: '50px', textAlign: 'center'}}>
-            <button onClick={onBack} style={{background: 'transparent', border: 'none', color: '#94a3b8', display: 'flex', gap: 5, alignItems: 'center', marginBottom: 20, cursor: 'pointer'}}>
-                <ArrowLeft size={18}/> Voltar
+            <button onClick={onBack} style={{background: 'transparent', border: 'none', color: '#94a3b8', display: 'flex', gap: 5, alignItems: 'center', marginBottom: 20, cursor: 'pointer', fontSize: '0.9rem'}}>
+                <ArrowLeft size={18}/> Voltar ao Menu
             </button>
-            <div className="card" style={{maxWidth: '400px', margin: '0 auto'}}>
+            <div className="card" style={{maxWidth: '400px', margin: '0 auto', padding: '40px 20px'}}>
                 <div style={{display: 'flex', justifyContent: 'center', marginBottom: 20}}>
                     <div style={{background: 'rgba(139, 92, 246, 0.1)', padding: 20, borderRadius: '50%'}}>
                         <Lock size={40} color="#8b5cf6" />
                     </div>
                 </div>
-                <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>
+                <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10, fontSize: '1.5rem'}}>
                     {isEmpty ? 'Configurar Cofre' : 'Cofre Bloqueado'}
                 </h2>
-                <p style={{color: '#94a3b8', marginBottom: 25}}>
+                <p style={{color: '#94a3b8', marginBottom: 25, fontSize: '0.9rem', lineHeight: '1.4'}}>
                     {isEmpty 
-                        ? 'Defina uma Senha Mestra para criptografar suas credenciais.' 
-                        : 'Digite sua Senha Mestra para descriptografar.'}
+                        ? 'Seu cofre está vazio. Crie uma Senha Mestra agora. Ela será usada para criptografar tudo.' 
+                        : 'Digite sua Senha Mestra para descriptografar e acessar suas contas.'}
                 </p>
                 
                 <form onSubmit={handleUnlock}>
                     <input 
                         type="password" 
-                        placeholder="Senha Mestra" 
+                        placeholder={isEmpty ? "Crie sua Senha Mestra" : "Senha Mestra"}
                         value={masterPassword}
                         onChange={e => setMasterPassword(e.target.value)}
-                        style={{textAlign: 'center', fontSize: '1.2rem', letterSpacing: 2}}
+                        style={{textAlign: 'center', fontSize: '1.1rem', letterSpacing: 2, padding: '12px'}}
                         autoFocus
                     />
-                    <button type="submit" className="btn-primary" style={{width: '100%'}} disabled={loading}>
-                        {loading ? <Loader2 className="spin-animation" /> : (isEmpty ? 'Definir e Entrar' : 'Desbloquear')}
+                    <button type="submit" className="btn-primary" style={{width: '100%', marginTop: 10}} disabled={loading}>
+                        {loading ? <Loader2 className="spin-animation" /> : (isEmpty ? 'Definir Senha e Entrar' : 'Desbloquear')}
                     </button>
                 </form>
             </div>
@@ -189,14 +186,50 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
   // --- TELA PRINCIPAL DO COFRE ---
   return (
     <div style={{width: '100%'}}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <div><h2 style={{margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)'}}>Cofre de <span style={{color: '#8b5cf6'}}>Senhas</span></h2></div>
+      {/* CABEÇALHO REORGANIZADO */}
+      <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '30px',
+          flexWrap: 'wrap', 
+          gap: '15px' 
+      }}>
+        <div style={{flex: 1, minWidth: '200px'}}>
+            <h2 style={{margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)', lineHeight: 1}}>
+                Cofre de <span style={{color: '#8b5cf6'}}>Senhas</span>
+            </h2>
+        </div>
+        
         <div style={{display: 'flex', gap: 10}}>
-            <button onClick={onBack} style={{background: 'transparent', border: '1px solid var(--border)', color: '#94a3b8', padding: '8px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer'}}>
+            {/* Botão Voltar (Visual mais limpo) */}
+            <button onClick={onBack} style={{
+                background: 'rgba(255,255,255,0.05)', 
+                border: '1px solid var(--border)', 
+                color: '#cbd5e1', 
+                padding: '10px 16px', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                fontSize: '0.9rem', 
+                cursor: 'pointer',
+                fontWeight: 500
+            }}>
                 <ArrowLeft size={16}/> Voltar
             </button>
-            <button onClick={() => setIsCreating(!isCreating)} className="btn-primary" style={{width: 'auto', padding: '8px 16px'}}>
-               {isCreating ? <X size={18}/> : <Plus size={18}/>} {isCreating ? 'Cancelar' : 'Nova Senha'}
+            
+            {/* Botão Nova Senha (Destaque) */}
+            <button onClick={() => setIsCreating(!isCreating)} className="btn-primary" style={{
+                width: 'auto', 
+                padding: '10px 20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8,
+                fontSize: '0.9rem'
+            }}>
+               {isCreating ? <X size={18}/> : <Plus size={18}/>} 
+               {isCreating ? 'Cancelar' : 'Nova Senha'}
             </button>
         </div>
       </div>
@@ -205,7 +238,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
         <div className="card" style={{marginBottom: 30, border: '1px solid #8b5cf6'}}>
             <h3 style={{marginTop: 0, marginBottom: 20}}>Adicionar Credencial</h3>
             <form onSubmit={handleSave}>
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 15}}>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginBottom: 15}}>
                     <input placeholder="Site / Nome (ex: Google)" value={site} onChange={e => setSite(e.target.value)} required />
                     <input placeholder="Usuário / Email" value={username} onChange={e => setUsername(e.target.value)} required />
                 </div>
@@ -233,10 +266,10 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
           <Search size={20} style={{position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8'}} />
           <input 
             type="text" 
-            placeholder="Pesquisar suas senhas..." 
+            placeholder="Pesquisar..." 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            style={{paddingLeft: 45, height: 50, fontSize: '1rem', borderRadius: 12}}
+            style={{paddingLeft: 45, height: 50, fontSize: '1rem', borderRadius: 12, width: '100%', boxSizing: 'border-box'}}
           />
       </div>
 
@@ -255,7 +288,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
                     <div style={{fontSize: '0.9rem', color: '#94a3b8', marginBottom: 15}}>{item.username}</div>
                     
                     <div style={{background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                        <div style={{fontFamily: 'monospace', fontSize: '1rem', color: isVisible ? '#10b981' : '#64748b'}}>
+                        <div style={{fontFamily: 'monospace', fontSize: '1rem', color: isVisible ? '#10b981' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis'}}>
                             {decryptedPassword}
                         </div>
                         <div style={{display: 'flex', gap: 10}}>
@@ -278,8 +311,9 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
           })}
           
           {filteredVault.length === 0 && !loading && (
-              <div style={{gridColumn: '1/-1', textAlign: 'center', padding: 40, color: '#64748b', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 16}}>
-                  Nenhuma senha encontrada.
+              <div style={{gridColumn: '1/-1', textAlign: 'center', padding: 60, color: '#64748b', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 16}}>
+                  <p>Nenhuma senha encontrada.</p>
+                  <p style={{fontSize: '0.8rem', marginTop: 10}}>Clique em "Nova Senha" para começar.</p>
               </div>
           )}
       </div>
