@@ -21,7 +21,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Estados do Formulário (Separados para não travar a lista)
+  // Estados do Formulário
   const [site, setSite] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -29,48 +29,57 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [masterPassword, setMasterPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(false); // Novo estado para saber se é o primeiro acesso
   
-  // Estado de visibilidade individual (para não descriptografar tudo de uma vez)
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Verifica se já existe algo no cofre para decidir se pede senha ou cria a primeira
     checkVaultStatus();
   }, []);
 
   const checkVaultStatus = async () => {
     const { count } = await supabase.from('vault_items').select('*', { count: 'exact', head: true });
+    // Se count for 0, marcamos como vazio mas NÃO desbloqueamos automaticamente.
+    // O usuário deve digitar a senha que deseja usar como Mestra na tela de bloqueio.
     if (count === 0) {
-      setIsUnlocked(true); // Se não tem nada, libera para criar a primeira senha mestre
-      setLoading(false);
-    } else {
-      setLoading(false);
+      setIsEmpty(true);
     }
+    setLoading(false);
   };
 
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!masterPassword) return;
     setLoading(true);
     
-    // Tenta baixar o PRIMEIRO item para validar a senha mestre
-    const { data, error } = await supabase.from('vault_items').select('*').limit(1);
-    
-    if (error) {
-        alert('Erro de conexão.');
-    } else if (!data || data.length === 0) {
-        // Se o cofre está vazio, qualquer senha serve para "abrir" e começar
+    if (isEmpty) {
+        // SE É O PRIMEIRO ACESSO:
+        // Não há o que validar. A senha digitada vira a senha mestra desta sessão.
         setIsUnlocked(true);
+        // (Opcional: Poderíamos salvar um hash da senha mestra no futuro para validar, 
+        // mas por enquanto validamos tentando descriptografar os itens).
     } else {
-        const testItem = data[0];
-        // O novo decrypt retorna NULL se a senha for errada
-        const decrypted = decrypt(testItem.password_encrypted, masterPassword);
+        // SE JÁ TEM SENHAS:
+        // Tenta baixar e descriptografar o PRIMEIRO item para validar a senha
+        const { data, error } = await supabase.from('vault_items').select('*').limit(1);
         
-        if (decrypted !== null) {
+        if (error) {
+            alert('Erro de conexão.');
+        } else if (!data || data.length === 0) {
+            // Caso raro onde isEmpty falhou, mas não tem dados -> Libera
             setIsUnlocked(true);
-            fetchVault();
         } else {
-            alert('Senha Mestra Incorreta!');
-            setMasterPassword(''); // Limpa o campo para tentar de novo
+            const testItem = data[0];
+            const decrypted = decrypt(testItem.password_encrypted, masterPassword);
+            
+            // Se decrypted for diferente de null, a senha está certa (contém o prefixo VALID:)
+            if (decrypted !== null) {
+                setIsUnlocked(true);
+                fetchVault();
+            } else {
+                alert('Senha Mestra Incorreta!');
+                setMasterPassword('');
+            }
         }
     }
     setLoading(false);
@@ -80,13 +89,16 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     setLoading(true);
     const { data, error } = await supabase.from('vault_items').select('*').order('created_at', { ascending: false });
     if (error) console.error('Erro ao buscar:', error);
-    else setVault(data || []);
+    else {
+        setVault(data || []);
+        if (data && data.length > 0) setIsEmpty(false);
+    }
     setLoading(false);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!masterPassword) { alert('Defina uma senha mestra primeiro!'); return; }
+    if (!masterPassword) { alert('Sessão expirada ou senha mestra não definida. Bloqueie e entre novamente.'); return; }
     
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -104,6 +116,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
             alert('Erro ao salvar: ' + error.message);
         } else {
             setSite(''); setUsername(''); setPassword(''); setIsCreating(false);
+            setIsEmpty(false); // Agora não está mais vazio
             fetchVault();
         }
     }
@@ -126,9 +139,6 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     setPassword(pass);
   };
 
-  // --- OTIMIZAÇÃO CRÍTICA: USEMEMO ---
-  // A lista só é recalculada se 'vault' ou 'searchTerm' mudarem.
-  // Digitar no formulário (site, username, password) NÃO vai disparar isso.
   const filteredVault = useMemo(() => {
     return vault.filter(item => 
       item.site.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,8 +159,14 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
                         <Lock size={40} color="#8b5cf6" />
                     </div>
                 </div>
-                <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>Cofre Bloqueado</h2>
-                <p style={{color: '#94a3b8', marginBottom: 25}}>Digite sua Senha Mestra para descriptografar suas credenciais.</p>
+                <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>
+                    {isEmpty ? 'Configurar Cofre' : 'Cofre Bloqueado'}
+                </h2>
+                <p style={{color: '#94a3b8', marginBottom: 25}}>
+                    {isEmpty 
+                        ? 'Defina uma Senha Mestra para criptografar suas credenciais.' 
+                        : 'Digite sua Senha Mestra para descriptografar.'}
+                </p>
                 
                 <form onSubmit={handleUnlock}>
                     <input 
@@ -162,7 +178,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
                         autoFocus
                     />
                     <button type="submit" className="btn-primary" style={{width: '100%'}} disabled={loading}>
-                        {loading ? <Loader2 className="spin-animation" /> : 'Desbloquear'}
+                        {loading ? <Loader2 className="spin-animation" /> : (isEmpty ? 'Definir e Entrar' : 'Desbloquear')}
                     </button>
                 </form>
             </div>
@@ -195,7 +211,7 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
                 </div>
                 <div style={{display: 'flex', gap: 10, marginBottom: 15}}>
                     <input 
-                        type="text" // Mostra a senha enquanto cria para o usuário ver
+                        type="text" 
                         placeholder="Senha" 
                         value={password} 
                         onChange={e => setPassword(e.target.value)} 
@@ -270,4 +286,3 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     </div>
   );
 }
-
