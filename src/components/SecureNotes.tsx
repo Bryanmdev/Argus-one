@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { encryptLight, decryptLight } from '../utils/security'; 
-import { Trash2, Plus, Lock, Search, ArrowLeft, Save, FileText, ShieldCheck, Loader2, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Trash2, Plus, Lock, Search, ArrowLeft, Save, FileText, ShieldCheck, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import '../App.css';
 
 const PinInput = ({ value, onChange, placeholder }: any) => (
