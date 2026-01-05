@@ -52,20 +52,25 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     e.preventDefault();
     setLoading(true);
     
-    // Tenta baixar e descriptografar o PRIMEIRO item para validar a senha mestre
+    // Tenta baixar o PRIMEIRO item para validar a senha mestre
     const { data, error } = await supabase.from('vault_items').select('*').limit(1);
     
-    if (error || !data || data.length === 0) {
-        // Caso de erro ou vazio
+    if (error) {
+        alert('Erro de conexão.');
+    } else if (!data || data.length === 0) {
+        // Se o cofre está vazio, qualquer senha serve para "abrir" e começar
         setIsUnlocked(true);
     } else {
         const testItem = data[0];
+        // O novo decrypt retorna NULL se a senha for errada
         const decrypted = decrypt(testItem.password_encrypted, masterPassword);
-        if (decrypted) {
+        
+        if (decrypted !== null) {
             setIsUnlocked(true);
             fetchVault();
         } else {
             alert('Senha Mestra Incorreta!');
+            setMasterPassword(''); // Limpa o campo para tentar de novo
         }
     }
     setLoading(false);
@@ -265,3 +270,4 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     </div>
   );
 }
+
