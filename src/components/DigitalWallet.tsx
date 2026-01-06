@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { encryptLight, decryptLight } from '../utils/security';
-import { ArrowLeft, Plus, Trash2, CreditCard, Copy, Eye, Loader2, FileText, User, Pencil, X, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, CreditCard, Copy, Eye, EyeOff, Loader2, FileText, User, Pencil, X, ShieldCheck, Lock } from 'lucide-react';
 import '../App.css';
 
-// --- CONFIGURAÇÕES VISUAIS ---
+// --- TEMAS VISUAIS ---
 const CARD_THEMES = [
   { name: 'Roxo (Nubank)', bg: 'linear-gradient(105deg, #820ad1 0%, #460570 100%)', text: 'white' },
   { name: 'Laranja (Inter)', bg: 'linear-gradient(105deg, #ff7a00 0%, #ff5200 100%)', text: 'white' },
@@ -24,7 +24,7 @@ const BRANDS = ['Mastercard', 'Visa', 'Elo', 'Amex', 'Hipercard', 'Outros'];
 
 interface WalletItem {
   id: string;
-  type: 'card' | 'document';
+  type: 'card' | 'document' | 'verifier';
   alias: string;
   field1_encrypted: string;
   field2_encrypted: string;
@@ -41,8 +41,13 @@ interface DigitalWalletProps {
 export default function DigitalWallet({ onBack }: DigitalWalletProps) {
   const [items, setItems] = useState<WalletItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Auth States
   const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isFirstAccess, setIsFirstAccess] = useState(false);
+
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'card' | 'document'>('card');
   const [editingItem, setEditingItem] = useState<WalletItem | null>(null);
@@ -59,22 +64,94 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
   const [visibleId, setVisibleId] = useState<string | null>(null);
 
   useEffect(() => { 
-    setLoading(false); 
+    checkVaultStatus();
     setFormColor(activeTab === 'card' ? CARD_THEMES[0].bg : DOC_THEMES[0].bg);
   }, [activeTab]);
 
-  const fetchItems = async () => {
+  const checkVaultStatus = async () => {
     setLoading(true);
     const { data } = await supabase.from('wallet_items').select('*').order('created_at', { ascending: false });
-    setItems(data || []);
+    
+    // Se não tiver NENHUM item, é o primeiro acesso
+    if (!data || data.length === 0) {
+        setIsFirstAccess(true);
+    } else {
+        setItems(data);
+        setIsFirstAccess(false);
+    }
     setLoading(false);
   };
 
-  const handleUnlock = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.length < 4) { alert('PIN muito curto'); return; }
-    setIsUnlocked(true);
-    fetchItems();
+    if (!pin) return;
+    if (pin.length < 4) { alert('PIN muito curto (mínimo 4 dígitos)'); return; }
+
+    setLoading(true);
+
+    if (isFirstAccess) {
+        // --- CRIAÇÃO E PERSISTÊNCIA IMEDIATA DO PIN ---
+        if (pin !== confirmPin) {
+            alert('Os PINs não conferem!');
+            setLoading(false);
+            return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            // AQUI ESTÁ A CORREÇÃO: Salva o PIN imediatamente criando o 'verifier'
+            const verifierPayload = encryptLight('VALIDATION_CHECK', pin);
+            
+            const { error } = await supabase.from('wallet_items').insert({
+                user_id: user.id,
+                type: 'verifier', // Item oculto
+                alias: 'SYSTEM_VERIFIER',
+                holder_name: 'SYSTEM',
+                field1_encrypted: verifierPayload, // Guarda o hash de validação
+                field2_encrypted: '',
+                field3_text: '',
+                color: '#000'
+            });
+
+            if (error) {
+                alert('Erro ao salvar PIN: ' + error.message);
+            } else {
+                alert('PIN salvo com sucesso!');
+                // Importante: Atualiza o estado local imediatamente
+                setIsFirstAccess(false);
+                setIsUnlocked(true);
+                // Busca o item recém-criado para popular o estado 'items'
+                const { data } = await supabase.from('wallet_items').select('*');
+                if(data) setItems(data);
+            }
+        }
+    } else {
+        // --- DESBLOQUEIO ---
+        // Procura especificamente o item verificador
+        const verifierItem = items.find(i => i.type === 'verifier');
+        let isValid = false;
+
+        if (verifierItem) {
+            // Validação Robusta: Tenta descriptografar o payload conhecido
+            const val = decryptLight(verifierItem.field1_encrypted, pin);
+            if (val === 'VALIDATION_CHECK') isValid = true;
+        } else if (items.length > 0) {
+            // Fallback (Compatibilidade): Se não achar o verificador, tenta com o primeiro item normal
+            // Isso serve caso o usuário tenha itens antigos criados antes dessa atualização
+            const testItem = items[0];
+            const check = decryptLight(testItem.field1_encrypted, pin);
+            // Se check retornar string válida (não vazia/null), assumimos sucesso
+            if (check) isValid = true; 
+        }
+
+        if (isValid) {
+            setIsUnlocked(true);
+        } else {
+            alert('PIN Incorreto!');
+            setPin('');
+        }
+    }
+    setLoading(false);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -101,9 +178,14 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
     } else {
       await supabase.from('wallet_items').insert({ ...payload, user_id: user.id, type: activeTab });
     }
-    closeEditor(); fetchItems(); setLoading(false);
+    
+    closeEditor(); 
+    const { data } = await supabase.from('wallet_items').select('*').order('created_at', { ascending: false });
+    if(data) setItems(data);
+    setLoading(false);
   };
 
+  // ... (Resto das funções auxiliares: handleEdit, handleDelete, renderCard, etc. permanecem iguais)
   const handleEdit = (item: WalletItem) => {
     const val1 = decryptLight(item.field1_encrypted, pin) || '';
     const val2 = decryptLight(item.field2_encrypted, pin) || '';
@@ -113,29 +195,18 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if(!confirm('Excluir?')) return;
+    if (!confirm('Excluir item?')) return;
     await supabase.from('wallet_items').delete().eq('id', id);
     if (editingItem?.id === id) closeEditor();
-    fetchItems();
+    const { data } = await supabase.from('wallet_items').select('*').order('created_at', { ascending: false });
+    if(data) setItems(data);
   };
 
   const closeEditor = () => { setEditingItem(null); setShowForm(false); resetForm(); };
   const resetForm = () => { setFormAlias(''); setFormHolder(''); setFormField1(''); setFormField2(''); setFormField3(''); setFormBrand(''); };
 
-  // --- HELPERS ---
-  const formatCardNumber = (num: string) => {
-    const clean = num.replace(/\D/g, '');
-    return clean.replace(/(\d{4})/g, '$1 ').trim();
-  };
-
-  const formatCPF = (num: string) => {
-    const clean = num.replace(/\D/g, '');
-    if (clean.length === 11) return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    return num; 
-  };
-
+  const formatCardNumber = (num: string) => num.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim();
   const getCleanNumber = (num: string) => num.replace(/\D/g, '');
-
   const renderBrandLogo = (brand?: string) => {
     if (!brand) return null;
     const b = brand.toLowerCase();
@@ -144,98 +215,58 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
     return <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase'}}>{brand}</div>;
   };
 
-  // --- RENDER CARD (SIMPLIFICADO) ---
-  const renderCard = (item: WalletItem, isVisible: boolean, val1: string, val2: string) => {
-    // Se visível, mostra formatado. Se não, mostra mascara.
-    const displayNum = isVisible 
-        ? formatCardNumber(val1) 
-        : `•••• •••• •••• ${val1.slice(-4) || '0000'}`;
+  // FILTRO IMPORTANTE: Remove o item verificador da lista visual
+  const visibleItems = useMemo(() => items.filter(i => i.type !== 'verifier' && i.type === activeTab), [items, activeTab]);
+
+  const ActionToolbar = ({ item }: { item: WalletItem }) => (
+    <div style={{display: 'flex', gap: 4, background: 'rgba(255, 255, 255, 0.2)', padding: '3px 6px', borderRadius: '20px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)'}}>
+        <button onClick={() => setVisibleId(visibleId === item.id ? null : item.id)} style={{background: 'transparent', border: 'none', color: 'white', padding: 4, cursor: 'pointer'}}>{visibleId === item.id ? <EyeOff size={14}/> : <Eye size={14}/>}</button>
+        <button onClick={() => handleEdit(item)} style={{background: 'transparent', border: 'none', color: 'white', padding: 4, cursor: 'pointer'}}><Pencil size={14}/></button>
+        <button onClick={() => handleDelete(item.id)} style={{background: 'transparent', border: 'none', color: '#fca5a5', padding: 4, cursor: 'pointer'}}><Trash2 size={14}/></button>
+    </div>
+  );
+
+  const renderCard = (item: WalletItem) => {
+    const isVisible = visibleId === item.id;
+    const val1 = decryptLight(item.field1_encrypted, pin) || '';
+    const val2 = decryptLight(item.field2_encrypted, pin) || '';
+    const displayNum = isVisible ? formatCardNumber(val1) : `•••• •••• •••• ${val1.slice(-4) || '0000'}`;
 
     return (
-    <div style={{
-        background: item.color, borderRadius: '18px', padding: '24px',
-        position: 'relative', color: 'white', boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-        minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)'
-    }}>
-        {/* Fundo decorativo (Z-Index baixo) */}
+    <div key={item.id} style={{background: item.color, borderRadius: '18px', padding: '24px', position: 'relative', color: 'white', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)'}}>
         <div style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.05, backgroundImage: 'url("https://www.transparenttextures.com/patterns/noise.png")', pointerEvents: 'none', zIndex: 0}}></div>
-
-        {/* TOPO */}
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 10}}>
-             <div>
-                <div style={{fontSize: '1rem', fontWeight: 700, marginBottom: 12}}>{item.alias}</div>
-                <div style={{width: 42, height: 28, background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)'}}></div>
-             </div>
-             
-             {/* Ações */}
-             <div style={{display: 'flex', gap: 5, background: 'rgba(0,0,0,0.2)', padding: '5px', borderRadius: '10px'}}>
-                <button onClick={() => setVisibleId(isVisible ? null : item.id)} style={{background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: 3}}><Eye size={16}/></button>
-                <button onClick={() => handleEdit(item)} style={{background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: 3}}><Pencil size={16}/></button>
-                <button onClick={() => handleDelete(item.id)} style={{background: 'transparent', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: 3}}><Trash2 size={16}/></button>
-             </div>
+             <div><div style={{fontSize: '1rem', fontWeight: 700, marginBottom: 12}}>{item.alias}</div><div style={{width: 42, height: 28, background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)'}}></div></div>
+             <ActionToolbar item={item} />
         </div>
-
-        {/* MEIO: NÚMERO (Sem flex complexo, Z-Index alto) */}
-        <div style={{
-            marginTop: 10, marginBottom: 15, position: 'relative', zIndex: 20, 
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}>
-             <span style={{
-                 fontSize: '1.3rem', // Tamanho seguro
-                 fontFamily: "'Courier New', monospace", 
-                 fontWeight: 700, 
-                 letterSpacing: '1px', 
-                 color: 'white',
-                 display: 'block'
-                 // Sem overflow:hidden para garantir que apareça
-             }}>
-                 {displayNum}
-             </span>
-             
-             <button onClick={() => navigator.clipboard.writeText(getCleanNumber(val1))} style={{background: 'transparent', border: 'none', cursor: 'pointer', color: 'white', opacity: 0.8}} title="Copiar">
-                 <Copy size={20} />
-             </button>
+        <div style={{marginTop: 10, marginBottom: 15, position: 'relative', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+             <span style={{fontSize: '1.3rem', fontFamily: "'Courier New', monospace", fontWeight: 700, letterSpacing: '1px', color: 'white', display: 'block'}}>{displayNum}</span>
+             <button onClick={() => { navigator.clipboard.writeText(getCleanNumber(val1)); alert('Copiado!'); }} style={{background: 'transparent', border: 'none', cursor: 'pointer', color: 'white', opacity: 0.8}}><Copy size={20} /></button>
         </div>
-
-        {/* RODAPÉ */}
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 10}}>
-             <div>
-                 <div style={{fontSize: '0.6rem', opacity: 0.8, textTransform: 'uppercase'}}>Titular</div>
-                 <div style={{fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase'}}>{item.holder_name}</div>
-             </div>
-
+             <div><div style={{fontSize: '0.6rem', opacity: 0.8, textTransform: 'uppercase'}}>Titular</div><div style={{fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase'}}>{item.holder_name}</div></div>
              <div style={{display: 'flex', gap: 20, alignItems: 'flex-end'}}>
-                 <div>
-                    <div style={{fontSize: '0.6rem', opacity: 0.8, textTransform: 'uppercase'}}>Validade</div>
-                    <div style={{fontSize: '0.9rem', fontWeight: 600}}>{item.field3_text}</div>
-                 </div>
-                 <div style={{position: 'relative', textAlign: 'right'}}>
-                    <div style={{position: 'absolute', top: -30, right: 0}}>{renderBrandLogo(item.card_brand)}</div>
-                    <div style={{fontSize: '0.6rem', opacity: 0.8, textTransform: 'uppercase'}}>CVV</div>
-                    <div style={{fontSize: '0.9rem', fontWeight: 600}}>{isVisible ? val2 : '•••'}</div>
-                 </div>
+                 <div><div style={{fontSize: '0.6rem', opacity: 0.8, textTransform: 'uppercase'}}>Validade</div><div style={{fontSize: '0.9rem', fontWeight: 600}}>{item.field3_text}</div></div>
+                 <div style={{position: 'relative', textAlign: 'right'}}><div style={{position: 'absolute', top: -30, right: 0}}>{renderBrandLogo(item.card_brand)}</div><div style={{fontSize: '0.6rem', opacity: 0.8, textTransform: 'uppercase'}}>CVV</div><div style={{fontSize: '0.9rem', fontWeight: 600}}>{isVisible ? val2 : '•••'}</div></div>
              </div>
         </div>
     </div>
     );
   };
 
-  const renderDocument = (item: WalletItem, isVisible: boolean, val1: string, val2: string) => {
+  const renderDocument = (item: WalletItem) => {
     const theme = DOC_THEMES.find(t => t.bg === item.color) || DOC_THEMES[0];
     const isDark = theme.bg.includes('#1e');
     const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-    const displayCPF = isVisible ? formatCPF(val2) : '•••.•••.•••-••';
+    const val1 = decryptLight(item.field1_encrypted, pin) || '';
+    const val2 = decryptLight(item.field2_encrypted, pin) || '';
+    const isVisible = visibleId === item.id;
 
     return (
-      <div style={{background: item.color, borderRadius: '12px', color: theme.text, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', minHeight: '200px', display: 'flex', flexDirection: 'column', border: `1px solid ${borderColor}`}}>
+      <div key={item.id} style={{background: item.color, borderRadius: '12px', color: theme.text, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', minHeight: '200px', display: 'flex', flexDirection: 'column', border: `1px solid ${borderColor}`}}>
           <div style={{background: theme.header, color: 'white', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               <div style={{fontSize: '0.75rem', fontWeight: 700, letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 8}}><ShieldCheck size={16}/> {item.alias.toUpperCase()}</div>
-              <div style={{display: 'flex', gap: 5}}>
-                  <button onClick={() => setVisibleId(isVisible ? null : item.id)} style={{background: 'transparent', border: 'none', color: 'white', padding: 2}}><Eye size={14}/></button>
-                  <button onClick={() => handleEdit(item)} style={{background: 'transparent', border: 'none', color: 'white', padding: 2}}><Pencil size={14}/></button>
-                  <button onClick={() => handleDelete(item.id)} style={{background: 'transparent', border: 'none', color: '#fca5a5', padding: 2}}><Trash2 size={14}/></button>
-              </div>
+              <ActionToolbar item={item} />
           </div>
           <div style={{display: 'flex', flex: 1, padding: '20px', gap: 16}}>
                <div style={{width: 70, height: 90, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', border: `1px solid ${borderColor}`, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}><User size={30} style={{opacity: 0.3}} /></div>
@@ -243,7 +274,7 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
                    <div><div style={{fontSize: '0.6rem', opacity: 0.7}}>NOME</div><div style={{fontSize: '0.85rem', fontWeight: 700}}>{item.holder_name}</div></div>
                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10}}>
                        <div><div style={{fontSize: '0.6rem', opacity: 0.7}}>REGISTRO</div><div style={{fontSize: '0.8rem', fontWeight: 600, fontFamily: 'monospace'}}>{isVisible ? val1 : '••••••'}</div></div>
-                       <div><div style={{fontSize: '0.6rem', opacity: 0.7}}>CPF</div><div style={{fontSize: '0.8rem', fontWeight: 600, fontFamily: 'monospace'}}>{displayCPF}</div></div>
+                       <div><div style={{fontSize: '0.6rem', opacity: 0.7}}>CPF</div><div style={{fontSize: '0.8rem', fontWeight: 600, fontFamily: 'monospace'}}>{isVisible ? val2 : '••••••'}</div></div>
                    </div>
                </div>
           </div>
@@ -255,13 +286,22 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
     return (
       <div className="container" style={{paddingTop: '50px', textAlign: 'center'}}>
          <button onClick={onBack} style={{background: 'transparent', border: 'none', color: '#94a3b8', display: 'flex', gap: 5, alignItems: 'center', marginBottom: 20, cursor: 'pointer'}}><ArrowLeft size={18}/> Voltar</button>
-         <div className="card" style={{maxWidth: '400px', margin: '0 auto'}}>
-            <CreditCard size={48} color="#f59e0b" style={{marginBottom: 15}}/>
-            <h2>Carteira Segura</h2>
-            <p style={{color: '#94a3b8', marginBottom: 20}}>Digite seu PIN.</p>
-            <form onSubmit={handleUnlock}>
+         <div className="card" style={{maxWidth: '400px', margin: '0 auto', padding: '40px 20px'}}>
+            <div style={{display: 'flex', justifyContent: 'center', marginBottom: 20}}>
+                <div style={{background: 'rgba(245, 158, 11, 0.1)', padding: 20, borderRadius: '50%'}}><Lock size={40} color="#f59e0b" /></div>
+            </div>
+            <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>{isFirstAccess ? 'Configurar PIN' : 'Carteira Bloqueada'}</h2>
+            <p style={{color: '#94a3b8', marginBottom: 20}}>
+                {isFirstAccess ? 'Defina um PIN numérico. Ele será salvo imediatamente para sua segurança.' : 'Digite seu PIN.'}
+            </p>
+            <form onSubmit={handleAuth}>
               <input type="password" inputMode="numeric" placeholder="PIN" value={pin} onChange={e => setPin(e.target.value)} style={{textAlign: 'center', letterSpacing: 4}} required maxLength={8}/>
-              <button className="btn-primary" style={{width: '100%'}}>Acessar</button>
+              {isFirstAccess && (
+                  <input type="password" inputMode="numeric" placeholder="Confirme o PIN" value={confirmPin} onChange={e => setConfirmPin(e.target.value)} style={{textAlign: 'center', letterSpacing: 4, marginTop: 10}} required maxLength={8}/>
+              )}
+              <button className="btn-primary" style={{width: '100%', marginTop: 15, background: '#f59e0b', borderColor: '#f59e0b'}} disabled={loading}>
+                  {loading ? <Loader2 className="spin-animation"/> : (isFirstAccess ? 'Salvar PIN e Entrar' : 'Acessar')}
+              </button>
             </form>
          </div>
       </div>
@@ -299,14 +339,16 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
                 </select>
               )}
               <input placeholder={activeTab === 'card' ? "Nome no Cartão" : "Nome Completo"} value={formHolder} onChange={e => setFormHolder(e.target.value)} required />
-              <div style={{display: 'flex', gap: 10}}>
-                 <input placeholder={activeTab === 'card' ? "Número" : "Registro"} value={formField1} onChange={e => setFormField1(e.target.value)} required style={{flex: 2}} />
-                 <input placeholder={activeTab === 'card' ? "CVV" : "CPF"} value={formField2} onChange={e => setFormField2(e.target.value)} required style={{flex: 1}} />
+              <div style={{display: 'flex', gap: 10, flexDirection: 'column'}}>
+                 <input placeholder={activeTab === 'card' ? "Número do Cartão" : "Número do Registro (RG/CNH)"} value={formField1} onChange={e => setFormField1(e.target.value)} required />
+                 <div style={{display: 'flex', gap: 10}}>
+                    <input placeholder={activeTab === 'card' ? "CVV" : "CPF / Outro"} value={formField2} onChange={e => setFormField2(e.target.value)} required style={{flex: 1}} />
+                    <input placeholder={activeTab === 'card' ? "Validade (MM/AA)" : "Órgão Emissor / Data"} value={formField3} onChange={e => setFormField3(e.target.value)} required style={{flex: 1}} />
+                 </div>
               </div>
-              <input placeholder={activeTab === 'card' ? "Validade" : "Órgão/Data"} value={formField3} onChange={e => setFormField3(e.target.value)} required style={{marginTop: 10}}/>
               <div style={{marginTop: 15, marginBottom: 15}}>
-                <label style={{fontSize: '0.9rem', color: '#94a3b8', display: 'block', marginBottom: 5}}>Cor:</label>
-                <div style={{display: 'flex', gap: 10}}>
+                <label style={{fontSize: '0.9rem', color: '#94a3b8', display: 'block', marginBottom: 5}}>Cor de Fundo:</label>
+                <div style={{display: 'flex', gap: 10, flexWrap: 'wrap'}}>
                    {(activeTab === 'card' ? CARD_THEMES : DOC_THEMES).map(t => (
                      <div key={t.name} onClick={() => setFormColor(t.bg)} style={{ width: 32, height: 32, borderRadius: '50%', background: t.bg, cursor: 'pointer', border: formColor === t.bg ? '2px solid white' : '1px solid rgba(255,255,255,0.2)' }} title={t.name}/>
                    ))}
@@ -318,12 +360,12 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
       )}
 
       <div className="vault-grid">
-         {items.filter(i => i.type === activeTab).map(item => {
-            const isVisible = visibleId === item.id;
-            const val1 = decryptLight(item.field1_encrypted, pin) || '';
-            const val2 = decryptLight(item.field2_encrypted, pin) || '';
-            return item.type === 'card' ? renderCard(item, isVisible, val1, val2) : renderDocument(item, isVisible, val1, val2);
-         })}
+         {visibleItems.length === 0 && (
+           <div style={{gridColumn: '1/-1', textAlign: 'center', padding: '40px', color: '#64748b', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '16px'}}>
+              <p>Nenhuma credencial salva ainda.</p>
+           </div>
+         )}
+         {visibleItems.map(item => item.type === 'card' ? renderCard(item) : renderDocument(item))}
       </div>
     </div>
   );

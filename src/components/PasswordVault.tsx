@@ -119,14 +119,13 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
 
   const checkVaultStatus = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); 
     const { data } = await supabase.from('vault_items').select('*').order('created_at', { ascending: false });
     const loadedItems = data || [];
     setItems(loadedItems);
 
+    // Se não tiver itens, é primeiro acesso (mostra form de criar pin)
     if (loadedItems.length === 0) { 
         setIsFirstAccess(true); 
-        setShowForm(true); 
     } else { 
         setIsFirstAccess(false); 
     }
@@ -137,21 +136,54 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
     e.preventDefault();
     if (!masterPin) return;
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Pequeno delay para UX
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     if (isFirstAccess) {
+      // --- LÓGICA DE CRIAÇÃO (Persistência Imediata) ---
       if (masterPin.length < 4) { showToast('PIN deve ter no mínimo 4 dígitos!', 'error'); setLoading(false); return; }
       if (masterPin !== confirmPin) { showToast('Os PINs não coincidem!', 'error'); setLoading(false); return; }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+          // SALVAR O ITEM OCULTO IMEDIATAMENTE
+          // Isso garante que o PIN exista mesmo sem criar senhas reais
+          const verifierUser = encryptData('VALID', masterPin);
+          const verifierPass = encryptData('CHECK', masterPin);
+          
+          await supabase.from('vault_items').insert({
+              user_id: user.id,
+              site_name: 'SYSTEM_VERIFIER', // Nome especial oculto
+              username_encrypted: verifierUser,
+              password_encrypted: verifierPass
+          });
+      }
+
       showToast('PIN de Acesso definido!', 'success');
+      setIsFirstAccess(false);
       setIsUnlocked(true);
+      // Recarrega para pegar o item verificador
+      const { data } = await supabase.from('vault_items').select('*');
+      if (data) setItems(data);
+
     } else {
+      // --- LÓGICA DE LOGIN NORMAL ---
+      // Tenta descriptografar o primeiro item que encontrar (pode ser o Verificador ou uma senha real)
       if (items.length === 0) {
+          // Caso de borda raro (banco limpo manualmente)
           setIsUnlocked(true);
       } else {
           const testItem = items[0];
+          // decryptData retorna null se a senha estiver errada (graças ao prefixo VALID:)
           const testDecryption = decryptData(testItem.password_encrypted, masterPin);
-          if (testDecryption) { setItems(items); setIsUnlocked(true); } 
-          else { showToast('PIN Incorreto!', 'error'); }
+          
+          if (testDecryption) { 
+              setIsUnlocked(true); 
+          } else { 
+              showToast('PIN Incorreto!', 'error'); 
+              setMasterPin('');
+          }
       }
     }
     setLoading(false);
@@ -188,10 +220,13 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
       if (!error) { showToast('Conta atualizada!', 'success'); handleCloseForm(); fetchItems(); } 
       else { showToast('Erro: ' + error.message, 'error'); }
     } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       const { error } = await supabase.from('vault_items').insert({
+        user_id: user.id,
         site_name: newSite, username_encrypted: userEncrypted, password_encrypted: passEncrypted,
       });
-      if (!error) { showToast('Conta adicionada!', 'success'); handleCloseForm(); setIsFirstAccess(false); fetchItems(); } 
+      if (!error) { showToast('Conta adicionada!', 'success'); handleCloseForm(); fetchItems(); } 
       else { showToast('Erro: ' + error.message, 'error'); }
     }
     setLoading(false);
@@ -240,12 +275,11 @@ export default function PasswordVault({ onBack }: PasswordVaultProps) {
 
   const strength = getPasswordStrength(newPass);
 
-  // --- OTIMIZAÇÃO CRÍTICA AQUI ---
-  // Memoriza a lista processada. 
-  // O React só vai rodar a descriptografia se 'items', 'searchTerm' ou 'masterPin' mudarem.
-  // Digitar no campo "Nova Senha" NÃO vai mais travar a tela.
+  // --- FILTRO DE VISUALIZAÇÃO ---
+  // IMPORTANTE: Remove o 'SYSTEM_VERIFIER' da lista para o usuário não ver/apagar
   const processedItems = useMemo(() => {
     return items
+        .filter(item => item.site_name !== 'SYSTEM_VERIFIER') // Oculta o item de sistema
         .filter(item => item.site_name.toLowerCase().includes(searchTerm.toLowerCase()))
         .map(item => ({
             ...item,

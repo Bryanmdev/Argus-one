@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { Loader2, Mail, Lock, User, ArrowRight, KeyRound, CheckCircle, ArrowLeft, Calendar } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowRight, KeyRound, CheckCircle, ArrowLeft, Calendar, AlertCircle } from 'lucide-react';
 import '../App.css';
 
 export default function Auth() {
@@ -23,28 +23,45 @@ export default function Auth() {
 
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 5000);
   };
 
-  // --- LÓGICA DE AUTENTICAÇÃO (MANTIDA) ---
+  // --- LÓGICA DE AUTENTICAÇÃO ---
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setToast(null); // Limpa erros anteriores
 
     try {
       if (isSignUp) {
+        // Validações de Cadastro
         if (password !== confirmPassword) throw new Error("As senhas não coincidem.");
         if (!birthDate) throw new Error("A data de nascimento é obrigatória.");
+        if (password.length < 6) throw new Error("A senha deve ter no mínimo 6 caracteres.");
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: fullName, birth_date: birthDate } },
         });
-        if (error) throw error;
+
+        if (error) {
+            // DETECÇÃO DE USUÁRIO DUPLICADO (Funciona se a proteção de enumeração estiver OFF no Supabase)
+            if (error.status === 400 || error.message.includes('already registered') || error.message.includes('User already exists')) {
+                throw new Error("Este e-mail já possui cadastro. Tente fazer login.");
+            }
+            throw error;
+        }
+
+        // Se chegou aqui e data.user é null, algo estranho aconteceu, mas geralmente é sucesso
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+             throw new Error("Este e-mail já existe. Tente fazer login.");
+        }
+
         setAwaitingVerification(true);
         showToast('Código enviado! Verifique seu email.', 'success');
       } else {
+        // Login
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw new Error("Email ou senha incorretos.");
       }
@@ -62,6 +79,8 @@ export default function Auth() {
       const { error } = await supabase.auth.verifyOtp({ email, token: otpCode, type: 'signup' });
       if (error) throw error;
       showToast('Conta verificada com sucesso!', 'success');
+      // Recarrega a página para entrar no app automaticamente
+      window.location.reload();
     } catch (error: any) {
       showToast('Código inválido ou expirado.', 'error');
     } finally {
@@ -74,11 +93,11 @@ export default function Auth() {
     setLoading(true);
     try {
       if (!email.includes('@')) throw new Error("Email inválido.");
-      if (!birthDate) throw new Error("Confirme a data de nascimento.");
+      if (!birthDate) throw new Error("Confirme a data de nascimento para segurança.");
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
       if (error) throw error;
-      showToast('Link enviado!', 'success');
+      showToast('Link de recuperação enviado para o email!', 'success');
       setIsRecovery(false); 
     } catch (error: any) {
       showToast(error.message, 'error');
@@ -87,44 +106,19 @@ export default function Auth() {
     }
   };
 
-  // --- ESTILOS DE CORREÇÃO VISUAL ---
-  
-  // Container do Input: Garante que o input e o ícone fiquem no mesmo contexto
-  const inputContainerStyle: React.CSSProperties = {
-    position: 'relative',
-    width: '100%',
-    height: '48px', // Altura fixa para o container
-    marginBottom: '15px'
-  };
-
-  // Wrapper do Ícone: Uma caixa invisível à esquerda, com altura total (100%)
-  // O Flexbox centraliza o ícone lá dentro automaticamente.
-  const iconWrapperStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: '100%', // Ocupa toda a altura do input
-    width: '45px',  // Mesma largura do padding do input
-    display: 'flex',
-    alignItems: 'center', // Centraliza verticalmente
-    justifyContent: 'center', // Centraliza horizontalmente
-    color: '#64748b',
-    pointerEvents: 'none', // O clique passa direto para o input
-    zIndex: 2
-  };
-
-  // O Input em si
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%', // Preenche a altura fixa de 48px
-    paddingLeft: '45px', // Espaço para o ícone
-    boxSizing: 'border-box',
-    margin: 0 // Remove margens padrão que desalinham
-  };
+  // --- ESTILOS VISUAIS ---
+  const inputContainerStyle: React.CSSProperties = { position: 'relative', width: '100%', height: '48px', marginBottom: '15px' };
+  const iconWrapperStyle: React.CSSProperties = { position: 'absolute', left: 0, top: 0, height: '100%', width: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', pointerEvents: 'none', zIndex: 2 };
+  const inputStyle: React.CSSProperties = { width: '100%', height: '100%', paddingLeft: '45px', boxSizing: 'border-box', margin: 0 };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', position: 'relative' }}>
-      {toast && <div className={`toast ${toast.type}`} style={{top: '20px'}}>{toast.msg}</div>}
+      {toast && (
+          <div className={`toast ${toast.type}`} style={{top: '20px', display: 'flex', alignItems: 'center', gap: 8}}>
+              {toast.type === 'error' ? <AlertCircle size={20}/> : <CheckCircle size={20}/>}
+              {toast.msg}
+          </div>
+      )}
 
       <div className="menu-card" style={{ maxWidth: '420px', width: '100%', padding: '40px', cursor: 'default', border: '1px solid rgba(139, 92, 246, 0.2)', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.3)' }}>
         
@@ -146,90 +140,41 @@ export default function Auth() {
         </div>
 
         {/* --- FORMULÁRIOS --- */}
-        
-        {/* 1. TELA DE RECUPERAÇÃO DE SENHA */}
         {isRecovery ? (
           <form onSubmit={handleRecovery} style={{ display: 'flex', flexDirection: 'column' }}>
              <p style={{fontSize: '0.9rem', color: '#cbd5e1', textAlign: 'center', lineHeight: '1.5', marginBottom: '20px'}}>
-               Confirme seus dados para receber o link.
+               Confirme seus dados para receber o link de redefinição.
              </p>
-             
-             <div style={inputContainerStyle}>
-                <div style={iconWrapperStyle}><Mail size={18} /></div>
-                <input type="email" placeholder="Email cadastrado" value={email} onChange={(e) => setEmail(e.target.value)} required style={inputStyle} />
-            </div>
-
-            <div style={inputContainerStyle}>
-                <div style={iconWrapperStyle}><Calendar size={18} /></div>
-                <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required style={{...inputStyle, colorScheme: 'dark'}} />
-            </div>
-
-            <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '10px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', borderRadius: '12px', fontWeight: 600 }}>
-               {loading ? <Loader2 className="spin-animation" size={20} /> : <>Validar e Enviar <ArrowRight size={18} /></>}
-            </button>
-            <button type="button" onClick={() => setIsRecovery(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.9rem', cursor: 'pointer', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-               <ArrowLeft size={16} /> Voltar
-            </button>
+             <div style={inputContainerStyle}><div style={iconWrapperStyle}><Mail size={18} /></div><input type="email" placeholder="Email cadastrado" value={email} onChange={(e) => setEmail(e.target.value)} required style={inputStyle} /></div>
+             <div style={inputContainerStyle}><div style={iconWrapperStyle}><Calendar size={18} /></div><input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required style={{...inputStyle, colorScheme: 'dark'}} /></div>
+             <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '10px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', borderRadius: '12px', fontWeight: 600 }}>{loading ? <Loader2 className="spin-animation" size={20} /> : <>Enviar Link <ArrowRight size={18} /></>}</button>
+             <button type="button" onClick={() => setIsRecovery(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.9rem', cursor: 'pointer', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><ArrowLeft size={16} /> Voltar</button>
           </form>
-
         ) : awaitingVerification ? (
-          /* 2. TELA DE CÓDIGO (OTP) */
           <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column' }}>
-             <div style={inputContainerStyle}>
-                <div style={iconWrapperStyle}><KeyRound size={18} /></div>
-                <input type="text" inputMode="numeric" placeholder="Código" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} required style={{...inputStyle, letterSpacing: '2px', fontSize: '1.1rem', textAlign: 'center'}} maxLength={8} />
-            </div>
-            <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '10px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', borderRadius: '12px', fontWeight: 600 }}>
-               {loading ? <Loader2 className="spin-animation" size={20} /> : <>Confirmar <CheckCircle size={18} /></>}
-            </button>
-            <button type="button" onClick={() => setAwaitingVerification(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.9rem', cursor: 'pointer', marginTop: '10px' }}>Voltar</button>
+             <div style={inputContainerStyle}><div style={iconWrapperStyle}><KeyRound size={18} /></div><input type="text" inputMode="numeric" placeholder="Código (6 dígitos)" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} required style={{...inputStyle, letterSpacing: '4px', fontSize: '1.2rem', textAlign: 'center'}} maxLength={6} /></div>
+             <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '10px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', borderRadius: '12px', fontWeight: 600 }}>{loading ? <Loader2 className="spin-animation" size={20} /> : <>Confirmar <CheckCircle size={18} /></>}</button>
+             <button type="button" onClick={() => setAwaitingVerification(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.9rem', cursor: 'pointer', marginTop: '10px' }}>Voltar</button>
           </form>
-
         ) : (
-          /* 3. TELA PRINCIPAL (LOGIN/CADASTRO) */
           <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column' }}>
             {isSignUp && (
               <>
-                <div style={{...inputContainerStyle, animation: 'fadeIn 0.3s ease'}}>
-                  <div style={iconWrapperStyle}><User size={18} /></div>
-                  <input type="text" placeholder="Nome Completo" value={fullName} onChange={(e) => setFullName(e.target.value)} required={isSignUp} style={inputStyle} />
-                </div>
-                
-                <div style={{...inputContainerStyle, animation: 'fadeIn 0.3s ease'}}>
-                  <div style={iconWrapperStyle}><Calendar size={18} /></div>
-                  <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required={isSignUp} style={{...inputStyle, colorScheme: 'dark', color: birthDate ? 'white' : '#94a3b8'}} />
-                </div>
+                <div style={{...inputContainerStyle, animation: 'fadeIn 0.3s ease'}}><div style={iconWrapperStyle}><User size={18} /></div><input type="text" placeholder="Nome Completo" value={fullName} onChange={(e) => setFullName(e.target.value)} required={isSignUp} style={inputStyle} /></div>
+                <div style={{...inputContainerStyle, animation: 'fadeIn 0.3s ease'}}><div style={iconWrapperStyle}><Calendar size={18} /></div><input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required={isSignUp} style={{...inputStyle, colorScheme: 'dark', color: birthDate ? 'white' : '#94a3b8'}} /></div>
               </>
             )}
-            
-            <div style={inputContainerStyle}>
-              <div style={iconWrapperStyle}><Mail size={18} /></div>
-              <input type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={inputStyle} />
-            </div>
-            
-            <div style={inputContainerStyle}>
-              <div style={iconWrapperStyle}><Lock size={18} /></div>
-              <input type="password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required style={inputStyle} />
-            </div>
-
+            <div style={inputContainerStyle}><div style={iconWrapperStyle}><Mail size={18} /></div><input type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={inputStyle} /></div>
+            <div style={inputContainerStyle}><div style={iconWrapperStyle}><Lock size={18} /></div><input type="password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required style={inputStyle} /></div>
             {!isSignUp && (
               <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '-10px', marginBottom: '15px'}}>
-                <button type="button" onClick={() => { setIsRecovery(true); setBirthDate(''); }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer' }}>
-                  Esqueci minha senha
-                </button>
+                <button type="button" onClick={() => { setIsRecovery(true); setBirthDate(''); }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer' }}>Esqueci minha senha</button>
               </div>
             )}
-
             {isSignUp && (
-              <div style={{...inputContainerStyle, animation: 'fadeIn 0.3s ease'}}>
-                <div style={{...iconWrapperStyle, color: 'var(--accent)'}}><Lock size={18} /></div>
-                <input type="password" placeholder="Confirme sua senha" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required={isSignUp} style={{...inputStyle, borderColor: (confirmPassword && password !== confirmPassword) ? 'var(--danger)' : ''}} />
-              </div>
+              <div style={{...inputContainerStyle, animation: 'fadeIn 0.3s ease'}}><div style={{...iconWrapperStyle, color: 'var(--accent)'}}><Lock size={18} /></div><input type="password" placeholder="Confirme sua senha" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required={isSignUp} style={{...inputStyle, borderColor: (confirmPassword && password !== confirmPassword) ? 'var(--danger)' : ''}} /></div>
             )}
-            
-            <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '10px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', borderRadius: '12px', fontWeight: 600 }}>
-              {loading ? <Loader2 className="spin-animation" size={20} /> : <>{isSignUp ? 'Continuar' : 'Acessar Sistema'} <ArrowRight size={18} /></>}
-            </button>
+            <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '10px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', borderRadius: '12px', fontWeight: 600 }}>{loading ? <Loader2 className="spin-animation" size={20} /> : <>{isSignUp ? 'Continuar' : 'Acessar Sistema'} <ArrowRight size={18} /></>}</button>
           </form>
         )}
 
