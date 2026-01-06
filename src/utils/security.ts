@@ -2,7 +2,7 @@
 
 // Função auxiliar para evitar problemas com caracteres especiais/acentos no btoa
 const toBase64 = (str: string) => {
-    // CORREÇÃO AQUI: Trocamos 'match' por '_' para o TypeScript não reclamar
+    // Usamos _ para ignorar a variável 'match' e evitar erro de build
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
         function toSolidBytes(_, p1) {
             return String.fromCharCode(parseInt(p1, 16));
@@ -53,11 +53,14 @@ export const decrypt = (encryptedText: string, key: string): string | null => {
     return null; // Senha errada (decriptou lixo)
 
   } catch (_) { 
-    // O underline (_) aqui também evita erro de "variável não usada" no catch
     return null; 
   }
 };
 
-// Aliases para compatibilidade com outros arquivos que usam encryptLight
+// --- ALIASES (APELIDOS) PARA COMPATIBILIDADE ---
+// Isso garante que tanto 'encrypt' quanto 'encryptData' funcionem
 export const encryptLight = encrypt;
 export const decryptLight = (text: string, key: string) => decrypt(text, key) || '';
+
+export const encryptData = encrypt;
+export const decryptData = decrypt;
