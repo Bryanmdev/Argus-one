@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
-import { encryptLight, decryptLight } from '../utils/security';
+import { encryptLight, decryptLight, encryptData, decryptData } from '../utils/security'; // Adicionamos encryptData/decryptData para compatibilidade global
 import { ArrowLeft, Plus, Trash2, CreditCard, Copy, Eye, EyeOff, Loader2, FileText, User, Pencil, X, ShieldCheck, Lock } from 'lucide-react';
 import '../App.css';
 
@@ -64,20 +64,32 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
   const [visibleId, setVisibleId] = useState<string | null>(null);
 
   useEffect(() => { 
-    checkVaultStatus();
+    checkGlobalStatus(); // Nome atualizado para refletir verificação global
     setFormColor(activeTab === 'card' ? CARD_THEMES[0].bg : DOC_THEMES[0].bg);
   }, [activeTab]);
 
-  const checkVaultStatus = async () => {
+  // --- NOVA VERIFICAÇÃO UNIFICADA ---
+  const checkGlobalStatus = async () => {
     setLoading(true);
-    const { data } = await supabase.from('wallet_items').select('*').order('created_at', { ascending: false });
     
-    // Se não tiver NENHUM item, é o primeiro acesso
-    if (!data || data.length === 0) {
-        setIsFirstAccess(true);
-    } else {
-        setItems(data);
+    // 1. Busca itens da carteira (para exibir depois)
+    const { data: walletData } = await supabase.from('wallet_items').select('*').order('created_at', { ascending: false });
+    if (walletData) setItems(walletData);
+
+    // 2. VERIFICAÇÃO GLOBAL: Olha no Cofre (vault_items) se já existe o 'SYSTEM_VERIFIER'
+    // Isso garante que se você criou o PIN lá, ele vale aqui.
+    const { data: vaultCheck } = await supabase.from('vault_items').select('*').eq('site_name', 'SYSTEM_VERIFIER').single();
+
+    if (vaultCheck) {
+        // Se existe no cofre, NÃO é primeiro acesso, mesmo que a carteira esteja vazia.
         setIsFirstAccess(false);
+    } else {
+        // Se não achou no cofre, verifica se tem algum item na carteira (fallback legado)
+        if (!walletData || walletData.length === 0) {
+             setIsFirstAccess(true);
+        } else {
+             setIsFirstAccess(false);
+        }
     }
     setLoading(false);
   };
@@ -85,12 +97,12 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pin) return;
-    if (pin.length < 4) { alert('PIN muito curto (mínimo 4 dígitos)'); return; }
+    if (isFirstAccess && pin.length < 4) { alert('PIN muito curto (mínimo 4 dígitos)'); return; }
 
     setLoading(true);
 
     if (isFirstAccess) {
-        // --- CRIAÇÃO E PERSISTÊNCIA IMEDIATA DO PIN ---
+        // --- CRIAÇÃO UNIFICADA DO PIN ---
         if (pin !== confirmPin) {
             alert('Os PINs não conferem!');
             setLoading(false);
@@ -99,49 +111,57 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
 
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            // AQUI ESTÁ A CORREÇÃO: Salva o PIN imediatamente criando o 'verifier'
+            // 1. Salva na CARTEIRA (Validação local rápida)
             const verifierPayload = encryptLight('VALIDATION_CHECK', pin);
-            
-            const { error } = await supabase.from('wallet_items').insert({
+            await supabase.from('wallet_items').insert({
                 user_id: user.id,
-                type: 'verifier', // Item oculto
+                type: 'verifier',
                 alias: 'SYSTEM_VERIFIER',
                 holder_name: 'SYSTEM',
-                field1_encrypted: verifierPayload, // Guarda o hash de validação
+                field1_encrypted: verifierPayload,
                 field2_encrypted: '',
                 field3_text: '',
                 color: '#000'
             });
 
-            if (error) {
-                alert('Erro ao salvar PIN: ' + error.message);
-            } else {
-                alert('PIN salvo com sucesso!');
-                // Importante: Atualiza o estado local imediatamente
-                setIsFirstAccess(false);
-                setIsUnlocked(true);
-                // Busca o item recém-criado para popular o estado 'items'
-                const { data } = await supabase.from('wallet_items').select('*');
-                if(data) setItems(data);
-            }
+            // 2. Salva no COFRE TAMBÉM (Para o PasswordVault reconhecer)
+            const verifierUser = encryptData('VALID', pin);
+            const verifierPass = encryptData('CHECK', pin);
+            await supabase.from('vault_items').insert({
+              user_id: user.id,
+              site_name: 'SYSTEM_VERIFIER', 
+              username_encrypted: verifierUser,
+              password_encrypted: verifierPass
+            });
+
+            alert('PIN Global configurado com sucesso!');
+            setIsFirstAccess(false);
+            setIsUnlocked(true);
         }
     } else {
-        // --- DESBLOQUEIO ---
-        // Procura especificamente o item verificador
-        const verifierItem = items.find(i => i.type === 'verifier');
+        // --- DESBLOQUEIO UNIFICADO ---
         let isValid = false;
 
-        if (verifierItem) {
-            // Validação Robusta: Tenta descriptografar o payload conhecido
-            const val = decryptLight(verifierItem.field1_encrypted, pin);
-            if (val === 'VALIDATION_CHECK') isValid = true;
-        } else if (items.length > 0) {
-            // Fallback (Compatibilidade): Se não achar o verificador, tenta com o primeiro item normal
-            // Isso serve caso o usuário tenha itens antigos criados antes dessa atualização
-            const testItem = items[0];
-            const check = decryptLight(testItem.field1_encrypted, pin);
-            // Se check retornar string válida (não vazia/null), assumimos sucesso
-            if (check) isValid = true; 
+        // TENTATIVA 1: Validar pelo Cofre (Padrão Ouro)
+        const { data: vaultItems } = await supabase.from('vault_items').select('*').eq('site_name', 'SYSTEM_VERIFIER');
+        
+        if (vaultItems && vaultItems.length > 0) {
+             // Usa a criptografia forte do cofre
+             const check = decryptData(vaultItems[0].password_encrypted, pin);
+             if (check === 'CHECK') isValid = true;
+        } 
+        
+        // TENTATIVA 2: Se falhou ou não achou no cofre, tenta validar pela Carteira (Fallback)
+        if (!isValid) {
+            const walletVerifier = items.find(i => i.type === 'verifier');
+            if (walletVerifier) {
+                const val = decryptLight(walletVerifier.field1_encrypted, pin);
+                if (val === 'VALIDATION_CHECK') isValid = true;
+            } else if (items.length > 0) {
+                 // Fallback legado: tenta descriptografar o primeiro item real
+                 const testItem = items[0];
+                 if (decryptLight(testItem.field1_encrypted, pin)) isValid = true;
+            }
         }
 
         if (isValid) {
@@ -185,7 +205,6 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
     setLoading(false);
   };
 
-  // ... (Resto das funções auxiliares: handleEdit, handleDelete, renderCard, etc. permanecem iguais)
   const handleEdit = (item: WalletItem) => {
     const val1 = decryptLight(item.field1_encrypted, pin) || '';
     const val2 = decryptLight(item.field2_encrypted, pin) || '';
@@ -215,7 +234,6 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
     return <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase'}}>{brand}</div>;
   };
 
-  // FILTRO IMPORTANTE: Remove o item verificador da lista visual
   const visibleItems = useMemo(() => items.filter(i => i.type !== 'verifier' && i.type === activeTab), [items, activeTab]);
 
   const ActionToolbar = ({ item }: { item: WalletItem }) => (
@@ -290,9 +308,9 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
             <div style={{display: 'flex', justifyContent: 'center', marginBottom: 20}}>
                 <div style={{background: 'rgba(245, 158, 11, 0.1)', padding: 20, borderRadius: '50%'}}><Lock size={40} color="#f59e0b" /></div>
             </div>
-            <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>{isFirstAccess ? 'Configurar PIN' : 'Carteira Bloqueada'}</h2>
+            <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>{isFirstAccess ? 'Configurar PIN Global' : 'Acesso Seguro'}</h2>
             <p style={{color: '#94a3b8', marginBottom: 20}}>
-                {isFirstAccess ? 'Defina um PIN numérico. Ele será salvo imediatamente para sua segurança.' : 'Digite seu PIN.'}
+                {isFirstAccess ? 'Defina um PIN único. Ele será usado para acessar suas senhas, cartões e notas.' : 'Digite seu PIN Mestre.'}
             </p>
             <form onSubmit={handleAuth}>
               <input type="password" inputMode="numeric" placeholder="PIN" value={pin} onChange={e => setPin(e.target.value)} style={{textAlign: 'center', letterSpacing: 4}} required maxLength={8}/>
@@ -300,7 +318,7 @@ export default function DigitalWallet({ onBack }: DigitalWalletProps) {
                   <input type="password" inputMode="numeric" placeholder="Confirme o PIN" value={confirmPin} onChange={e => setConfirmPin(e.target.value)} style={{textAlign: 'center', letterSpacing: 4, marginTop: 10}} required maxLength={8}/>
               )}
               <button className="btn-primary" style={{width: '100%', marginTop: 15, background: '#f59e0b', borderColor: '#f59e0b'}} disabled={loading}>
-                  {loading ? <Loader2 className="spin-animation"/> : (isFirstAccess ? 'Salvar PIN e Entrar' : 'Acessar')}
+                  {loading ? <Loader2 className="spin-animation"/> : (isFirstAccess ? 'Definir Acesso Global' : 'Desbloquear')}
               </button>
             </form>
          </div>

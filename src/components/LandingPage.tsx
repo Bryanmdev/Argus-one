@@ -34,12 +34,14 @@ export default function LandingPage({ onStart }: LandingPageProps) {
                 border: '1px solid rgba(255,255,255,0.1)', 
                 color: '#cbd5e1', 
                 
+                // --- AQUI ESTÁ A MUDANÇA ---
                 padding: '6px 14px',   // Bem justo ao texto
                 fontSize: '0.8rem',    // Texto levemente menor
                 minWidth: '0',         // Garante que não estique
                 width: 'auto',
                 // ---------------------------
-                borderRadius: '6px',   // Cantos levemente arredondados
+
+                borderRadius: '6px',   // Cantos levemente arredondados (menos "bolinha")
                 fontWeight: 500,
                 cursor: 'pointer',
                 fontFamily: 'var(--font-display)',
@@ -62,7 +64,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
       <header className="landing-hero" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '60px 20px' }}>
          
          <div style={{ marginBottom: '30px', padding: '6px 16px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '30px', color: '#a78bfa', fontSize: '0.8rem', border: '1px solid rgba(139, 92, 246, 0.2)', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            Versão BETA 1.0 Disponível
+            Versão 1.0 Disponível
          </div>
          
          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(3.5rem, 10vw, 6rem)', lineHeight: 1, maxWidth: '1100px', margin: '0 0 30px 0', fontWeight: 700, color: 'white', letterSpacing: '-2.5px' }}>
@@ -112,5 +114,4 @@ export default function LandingPage({ onStart }: LandingPageProps) {
       </footer>
     </div>
   );
-
 }

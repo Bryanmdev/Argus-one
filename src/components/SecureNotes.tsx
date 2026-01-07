@@ -17,7 +17,7 @@ const PinInput = ({ value, onChange, placeholder }: any) => (
       maxLength={8}
       style={{ 
         paddingRight: '45px', 
-        paddingLeft: '45px', // CORREÇÃO: Equilibra o espaço para o texto ficar no meio exato
+        paddingLeft: '45px', 
         marginBottom: 0, 
         letterSpacing: '4px', 
         textAlign: 'center' 
@@ -77,7 +77,7 @@ export default function SecureNotes({ onBack }: SecureNotesProps) {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
         handleLock(); // Chama o bloqueio local
-    }, 5 * 60 * 1000);
+    }, 5 * 60 * 1000); // 5 Minutos
   };
 
   useEffect(() => {
@@ -256,35 +256,37 @@ export default function SecureNotes({ onBack }: SecureNotesProps) {
            <button onClick={closeEditor} style={{background: 'transparent', color: '#94a3b8', border: 'none', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer'}}>
              <ArrowLeft size={18}/> Voltar
            </button>
-           <h2 style={{fontSize: '1.2rem', margin: 0}}>{editingNote ? 'Editar Nota' : 'Nova Nota Segura'}</h2>
+           <h2 style={{fontSize: '1.2rem', margin: 0, color: 'var(--text-color)'}}>{editingNote ? 'Editar Nota' : 'Nova Nota Segura'}</h2>
            <button onClick={handleSave} className="btn-primary" style={{width: 'auto', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 8}}>
              {loading ? <Loader2 className="spin-animation" size={18}/> : <><Save size={18}/> Salvar</>}
            </button>
         </div>
         <div className="card" style={{padding: '30px'}}>
-           <input value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Título da Nota" style={{fontSize: '1.5rem', fontWeight: 'bold', border: 'none', background: 'transparent', padding: '0 0 10px 0', borderRadius: 0, borderBottom: '1px solid #334155', marginBottom: '20px'}} />
-           <textarea value={formContent} onChange={e => setFormContent(e.target.value)} placeholder="Digite seu conteúdo secreto aqui..." style={{width: '100%', minHeight: '400px', background: 'transparent', color: '#cbd5e1', border: 'none', resize: 'none', fontSize: '1rem', lineHeight: '1.6', outline: 'none', fontFamily: 'monospace'}} />
+           <input value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Título da Nota" style={{fontSize: '1.5rem', fontWeight: 'bold', border: 'none', background: 'transparent', padding: '0 0 10px 0', borderRadius: 0, borderBottom: '1px solid #334155', marginBottom: '20px', color: 'var(--text-color)'}} />
+           <textarea value={formContent} onChange={e => setFormContent(e.target.value)} placeholder="Digite seu conteúdo secreto aqui..." style={{width: '100%', minHeight: '400px', background: 'transparent', color: 'var(--text-color)', border: 'none', resize: 'none', fontSize: '1rem', lineHeight: '1.6', outline: 'none', fontFamily: 'monospace'}} />
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', paddingBottom: '60px' }}>
       {toast && <div className={`toast ${toast.type}`}>{toast.type === 'success' ? <CheckCircle size={18}/> : <AlertCircle size={18}/>}{toast.message}</div>}
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div><h2 style={{margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)'}}>Notas <span style={{color: '#10b981'}}>Seguras</span></h2></div>
+        <div><h2 style={{margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: 'var(--text-color)'}}>Notas <span style={{color: '#10b981'}}>Seguras</span></h2></div>
         <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={onBack} style={{background: 'transparent', border: '1px solid var(--border)', color: '#94a3b8', padding: '8px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer'}}>
+            {/* BOTÃO VOLTAR CORRIGIDO (Pequeno) */}
+            <button onClick={onBack} style={{background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer', width: 'auto', flex: 'none'}}>
                 <ArrowLeft size={16}/> Voltar
              </button>
             
-            {/* BOTÃO CORRIGIDO: CHAMA handleLock */}
             <button onClick={handleLock} className="btn-danger" style={{ width: 'auto', padding: '8px 16px', fontSize: '0.9rem' }}>
               <Lock size={16} /> Bloquear
             </button>
         </div>
       </div>
+
       <div style={{display: 'flex', gap: 15, marginBottom: '30px'}}>
          <button onClick={() => openEditor()} className="btn-primary" style={{width: 'auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 8}}><Plus size={20}/> Criar Nota</button>
          <div style={{ position: 'relative', flex: 1 }}>
@@ -292,22 +294,38 @@ export default function SecureNotes({ onBack }: SecureNotesProps) {
             <input type="text" placeholder="Pesquisar títulos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ paddingLeft: '45px', marginBottom: 0, height: '100%' }} />
          </div>
       </div>
+
       <div className="vault-grid">
          {filteredNotes.map(note => {
             const title = decryptLight(note.title_encrypted, pin);
             const content = decryptLight(note.content_encrypted, pin) || '';
             const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+            
             return (
               <div key={note.id} className="vault-item" style={{cursor: 'pointer', borderColor: 'rgba(16, 185, 129, 0.2)'}} onClick={() => openEditor(note)}>
                  <div style={{marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                    <div style={{display: 'flex', alignItems: 'center', gap: 10, color: '#10b981'}}><FileText size={20} /><strong style={{fontSize: '1.1rem', color: 'white'}}>{title}</strong></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 10, color: '#10b981'}}><FileText size={20} /><strong style={{fontSize: '1.1rem', color: 'var(--text-color)'}}>{title}</strong></div>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }} style={{background: 'transparent', border: 'none', color: '#ef4444', padding: 5, cursor: 'pointer'}} title="Excluir Nota"><Trash2 size={18} /></button>
                  </div>
-                 <p style={{color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.5', flex: 1}}>{preview}</p>
+                 
+                 {/* AQUI ESTÁ A CORREÇÃO PRINCIPAL: wordBreak e overflowWrap */}
+                 <p style={{
+                     color: 'var(--text-secondary)', 
+                     fontSize: '0.9rem', 
+                     lineHeight: '1.5', 
+                     flex: 1,
+                     wordBreak: 'break-word',    // Força a quebra de palavras longas
+                     overflowWrap: 'anywhere',   // Garante quebra em qualquer lugar se necessário
+                     whiteSpace: 'pre-wrap'      // Mantém parágrafos originais
+                 }}>
+                     {preview}
+                 </p>
+
                  <div style={{marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', color: '#64748b'}}>Criptografia AES Rápida</div>
               </div>
             );
          })}
+         
          {filteredNotes.length === 0 && (
            <div style={{gridColumn: '1/-1', textAlign: 'center', padding: '50px', color: '#64748b', border: '2px dashed #334155', borderRadius: '16px'}}>
               <FileText size={48} style={{opacity: 0.2, marginBottom: 15}}/><p>Nenhuma nota encontrada.</p>
