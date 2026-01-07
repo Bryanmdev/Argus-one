@@ -65,7 +65,7 @@ Pré-requisitos: Node.js e NPM/Yarn instalados.
 
 ```bash
 # 1. Clone o repositório
-git clone [https://github.com/seu-usuario/argus-one.git](https://github.com/seu-usuario/argus-one.git)
+git clone [https://github.com/Bryanmdev/Argus-one.git](https://github.com/Bryanmdev/Argus-one.git)
 
 # 2. Entre na pasta
 cd argus-one
@@ -80,3 +80,6 @@ npm install
 
 # 5. Rode o projeto
 npm run dev
+```
+
+<div align="center"> <p>Desenvolvido por <a href="https://www.google.com/search?q=https://linkedin.com/in/bryan-miraanda">Bryan Miranda</a></p> </div>
