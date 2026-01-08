@@ -31,13 +31,9 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
   const [newService, setNewService] = useState('');
   const [newSecret, setNewSecret] = useState('');
 
-  // --- 1. AUTENTICAÇÃO COM PIN GLOBAL ---
   const handleUnlock = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading(true);
-
-      // Validação simplificada (assume que se o PIN descriptografa, está ok)
-      // Em produção, use a mesma validação robusta do Dashboard.tsx
       if (pin.length >= 4) {
           setIsUnlocked(true);
           fetchTokens();
@@ -55,7 +51,6 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
       }
   };
 
-  // --- 2. GERAÇÃO DE CÓDIGOS EM TEMPO REAL ---
   const updateCodes = (currentTokens: TokenItem[]) => {
       const newCodes: Record<string, string> = {};
       currentTokens.forEach(t => {
@@ -71,19 +66,15 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
       setCodes(newCodes);
   };
 
-  // Timer Effect (Roda a cada segundo)
   useEffect(() => {
       if (!isUnlocked) return;
-
       const timer = setInterval(() => {
           const seconds = getRemainingSeconds();
           setProgress(seconds);
-          
           if (seconds === 30 || seconds === 29) {
               updateCodes(tokens);
           }
       }, 1000);
-
       return () => clearInterval(timer);
   }, [isUnlocked, tokens]);
 
@@ -93,14 +84,12 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
       if (!user) return;
 
       const cleanSecret = newSecret.replace(/\s/g, '').toUpperCase();
-      
       if (cleanSecret.length < 16) {
-          alert("A chave secreta parece muito curta. Geralmente tem 16 ou 32 caracteres.");
+          alert("A chave secreta parece muito curta.");
           return;
       }
 
       const encrypted = encryptLight(cleanSecret, pin);
-
       await supabase.from('auth_tokens').insert({
           user_id: user.id,
           service_name: newService,
@@ -115,26 +104,25 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
   };
 
   const handleDelete = async (id: string) => {
-      if(confirm("Remover este autenticador? Você pode perder acesso à sua conta se não tiver backup.")) {
+      if(confirm("Remover este autenticador?")) {
           await supabase.from('auth_tokens').delete().eq('id', id);
           fetchTokens();
       }
   };
 
-  // --- TELA DE BLOQUEIO ---
   if (!isUnlocked) {
     return (
       <div className="container" style={{paddingTop: '50px', textAlign: 'center'}}>
-         <button onClick={onBack} style={{background: 'transparent', border: 'none', color: '#94a3b8', display: 'flex', gap: 5, alignItems: 'center', marginBottom: 20, cursor: 'pointer'}}><ArrowLeft size={18}/> Voltar</button>
+         <button onClick={onBack} style={{background: 'transparent', border: 'none', color: 'var(--text-secondary)', display: 'flex', gap: 5, alignItems: 'center', marginBottom: 20, cursor: 'pointer'}}><ArrowLeft size={18}/> Voltar</button>
          <div className="card" style={{maxWidth: '400px', margin: '0 auto', padding: '40px 20px'}}>
             <div style={{display: 'flex', justifyContent: 'center', marginBottom: 20}}>
                 <div style={{background: 'rgba(59, 130, 246, 0.1)', padding: 20, borderRadius: '50%'}}><Smartphone size={40} color="#3b82f6" /></div>
             </div>
-            <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10}}>Argus Authenticator</h2>
-            <p style={{color: '#94a3b8', marginBottom: 20}}>Digite seu PIN Global para acessar seus códigos 2FA.</p>
+            <h2 style={{fontFamily: 'var(--font-display)', marginBottom: 10, color: 'var(--text-color)'}}>Argus Authenticator</h2>
+            <p style={{color: 'var(--text-secondary)', marginBottom: 20}}>Digite seu PIN Global para acessar seus códigos 2FA.</p>
             <form onSubmit={handleUnlock}>
               <input type="password" inputMode="numeric" placeholder="PIN" value={pin} onChange={e => setPin(e.target.value)} style={{textAlign: 'center', letterSpacing: 4}} required maxLength={8}/>
-              <button className="btn-primary" style={{width: '100%', marginTop: 15, background: '#3b82f6', borderColor: '#3b82f6'}} disabled={loading && pin.length < 4}>
+              <button className="btn-primary" style={{width: '100%', marginTop: 15}} disabled={loading && pin.length < 4}>
                   {loading && pin.length > 0 ? <Loader2 className="spin-animation"/> : 'Desbloquear'}
               </button>
             </form>
@@ -143,25 +131,46 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
     );
   }
 
-  // --- TELA PRINCIPAL ---
   return (
     <div style={{ width: '100%', paddingBottom: '60px' }}>
+      
+      {/* HEADER COM BOTÕES CORRIGIDOS (PEQUENOS) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
-            <h2 style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)' }}>2FA <span style={{ color: '#3b82f6' }}>Tokens</span></h2>
+            <h2 style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: 'var(--text-color)' }}>2FA <span style={{ color: '#3b82f6' }}>Tokens</span></h2>
         </div>
         <div style={{display: 'flex', gap: 10}}>
-            <button onClick={onBack} style={{background: 'transparent', border: '1px solid var(--border)', color: '#94a3b8', padding: '8px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer'}}><ArrowLeft size={16}/> Voltar</button>
-            <button onClick={() => setShowAdd(!showAdd)} className="btn-primary" style={{width: 'auto', padding: '8px 16px', background: '#3b82f6', borderColor: '#3b82f6'}}><Plus size={18}/> {showAdd ? 'Fechar' : 'Novo Token'}</button>
+            <button 
+                onClick={onBack} 
+                style={{
+                    width: 'auto', flex: 'none',
+                    background: 'transparent', border: '1px solid var(--border)', 
+                    color: 'var(--text-secondary)', padding: '8px 12px', 
+                    borderRadius: '8px', display: 'flex', alignItems: 'center', 
+                    gap: '6px', fontSize: '0.9rem', cursor: 'pointer'
+                }}
+            >
+                <ArrowLeft size={16}/> Voltar
+            </button>
+            
+            <button 
+                onClick={() => setShowAdd(!showAdd)} 
+                className="btn-primary" 
+                style={{
+                    width: 'auto', flex: 'none',
+                    padding: '8px 16px', background: '#3b82f6', 
+                    borderColor: '#3b82f6', display: 'flex', alignItems: 'center', gap: 6
+                }}
+            >
+                <Plus size={18}/> {showAdd ? 'Fechar' : 'Novo'}
+            </button>
         </div>
       </div>
 
       {showAdd && (
           <div className="card" style={{ marginBottom: 30, border: '1px solid #3b82f6', animation: 'fadeIn 0.3s' }}>
-              <h3 style={{ marginTop: 0 }}>Adicionar Novo Serviço</h3>
-              <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                  No site que deseja proteger (Google, Facebook, etc), escolha "Configurar 2FA" e selecione "Digitar chave manualmente" ou "Não consigo ler o QR Code".
-              </p>
+              <h3 style={{ marginTop: 0, color: 'var(--text-color)' }}>Adicionar Novo Serviço</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Insira a chave secreta fornecida pelo serviço (Ex: Google, Facebook).</p>
               <form onSubmit={handleAddToken}>
                   <input placeholder="Nome do Serviço (ex: Gmail Principal)" value={newService} onChange={e => setNewService(e.target.value)} required />
                   <input placeholder="Chave Secreta (ex: JBSWY3DPEHPK3PXP)" value={newSecret} onChange={e => setNewSecret(e.target.value)} required style={{ fontFamily: 'monospace', textTransform: 'uppercase' }} />
@@ -171,7 +180,7 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
       )}
 
       {tokens.length === 0 && !showAdd && (
-          <div style={{ textAlign: 'center', padding: '50px', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '16px', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '50px', border: '2px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)' }}>
               <Smartphone size={48} style={{ marginBottom: 15, opacity: 0.5 }} />
               <p>Nenhum autenticador configurado.</p>
               <button onClick={() => setShowAdd(true)} style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer' }}>+ Adicionar o primeiro</button>
@@ -180,40 +189,40 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
 
       <div className="vault-grid">
           {tokens.map(token => (
-              <div key={token.id} className="menu-card" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'flex-start', gap: 10, ['--hover-color' as any]: '#3b82f6' }}>
+              <div key={token.id} className="menu-card" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'flex-start', gap: 15, ['--hover-color' as any]: '#3b82f6', minHeight: 'auto' }}>
                   
-                  {/* CABEÇALHO DO CARD */}
+                  {/* CABEÇALHO */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <ShieldCheck size={20} color="#3b82f6" />
-                          <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>{token.service_name}</span>
+                          <span style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--text-color)' }}>{token.service_name}</span>
                       </div>
                       {/* Timer Circular */}
                       <div style={{ position: 'relative', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                            <svg width="24" height="24" viewBox="0 0 36 36">
-                                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#334155" strokeWidth="4" />
+                                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--border)" strokeWidth="4" />
                                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={progress < 5 ? '#ef4444' : '#3b82f6'} strokeWidth="4" strokeDasharray={`${(progress / 30) * 100}, 100`} style={{ transition: 'stroke-dasharray 1s linear' }} />
                            </svg>
-                           <span style={{ position: 'absolute', fontSize: '0.6rem', fontWeight: 'bold', color: progress < 5 ? '#ef4444' : '#94a3b8' }}>{progress}</span>
+                           <span style={{ position: 'absolute', fontSize: '0.6rem', fontWeight: 'bold', color: progress < 5 ? '#ef4444' : 'var(--text-secondary)' }}>{progress}</span>
                       </div>
                   </div>
 
-                  {/* ÁREA DO CÓDIGO E BOTÃO (CORRIGIDA COM FLEXBOX) */}
-                  <div style={{ width: '100%', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
+                  {/* CORREÇÃO DO LAYOUT: FLEXBOX PARA EVITAR SOBREPOSIÇÃO */}
+                  <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
                       
-                      {/* 1. Área do Código (Texto) */}
+                      {/* Área do Código (Expansível) */}
                       <div style={{ flex: 1, padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                           <div style={{ fontSize: '1.8rem', fontFamily: 'monospace', letterSpacing: '3px', fontWeight: 700, color: progress < 5 ? '#ef4444' : 'white', transition: 'color 0.3s', whiteSpace: 'nowrap' }}>
+                           <div style={{ fontSize: '1.8rem', fontFamily: 'monospace', letterSpacing: '3px', fontWeight: 700, color: progress < 5 ? '#ef4444' : 'var(--text-color)', transition: 'color 0.3s', whiteSpace: 'nowrap' }}>
                                 {codes[token.id] ? codes[token.id].replace(/(\d{3})(\d{3})/, '$1 $2') : <Loader2 className="spin-animation" size={24} />}
                            </div>
                       </div>
 
-                      {/* 2. Área do Botão (Separada) */}
+                      {/* Área do Botão (Fixa e Separada) */}
                       <button 
                         onClick={() => { navigator.clipboard.writeText(codes[token.id]); alert('Copiado!'); }}
-                        style={{ background: 'rgba(255,255,255,0.05)', borderLeft: '1px solid rgba(255,255,255,0.05)', borderRight: 'none', borderTop: 'none', borderBottom: 'none', color: '#94a3b8', cursor: 'pointer', width: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-                        onMouseEnter={(e) => {e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'white'}}
-                        onMouseLeave={(e) => {e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#94a3b8'}}
+                        style={{ width: '60px', flex: 'none', background: 'rgba(255,255,255,0.03)', border: 'none', borderLeft: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                        onMouseEnter={(e) => {e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'var(--text-color)'}}
+                        onMouseLeave={(e) => {e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'var(--text-secondary)'}}
                         title="Copiar código"
                       >
                           <Copy size={20} />
@@ -222,7 +231,7 @@ export default function Authenticator({ onBack }: AuthenticatorProps) {
 
                   {/* BOTÃO REMOVER */}
                   <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-                      <button onClick={() => handleDelete(token.id)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', padding: 5 }}>
+                      <button onClick={() => handleDelete(token.id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', padding: 5 }}>
                           <Trash2 size={14} /> Remover
                       </button>
                   </div>
