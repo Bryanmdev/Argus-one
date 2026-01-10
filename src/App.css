@@ -24,26 +24,26 @@
   --hover-color: #8b5cf6; 
 }
 
-/* TEMA CLARO (SÓ ATIVA SE O USUÁRIO CLICAR NO BOTÃO) */
+/* --- TEMA CLARO (ESTAVA FALTANDO ISSO) --- */
+body.light {
+  --bg-color: #f1f5f9;
+  --card-bg: #ffffff;
+  --text-color: #1e293b;
+  --text-secondary: #64748b;
+  --border: #cbd5e1;
+  --input-bg: #f8fafc;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+}
+
 /* --- CORREÇÃO NO BODY --- */
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-body);
   min-height: 100vh;
-  margin: 0;  /* Importante: Zera margem para evitar rolagem branca */
-  padding: 0; /* Padding deve ser controlado pelos containers internos, não no body */
-  -webkit-font-smoothing: antialiased; 
-  overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: var(--font-body);
-  min-height: 100vh;
-  padding: 20px; /* Adicionado padding global para não colar nas bordas */
+  margin: 0;
+  padding: 20px;
   -webkit-font-smoothing: antialiased; 
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -52,7 +52,7 @@ body {
 /* Container flexível */
 .container {
   width: 100%;
-  max-width: 1200px; /* Limite para não esticar demais em telas gigantes */
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 15px;
 }
@@ -63,7 +63,7 @@ body {
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--text-color); /* Usa variável para reagir ao tema */
+  color: var(--text-color);
   letter-spacing: -1px;
 }
 
@@ -115,8 +115,6 @@ input::placeholder { color: #64748b; }
   justify-content: space-between; 
   min-height: 160px; 
   transition: all 0.2s ease;
-  
-  /* CORREÇÃO: Força quebra de linha em palavras gigantes */
   word-break: break-word; 
   overflow-wrap: break-word; 
   hyphens: auto;
@@ -132,39 +130,31 @@ input::placeholder { color: #64748b; }
     margin-bottom: 20px; 
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
     transition: background-color 0.3s ease, border-color 0.3s ease;
-    /* CORREÇÃO: Mesma coisa para cards genéricos */
     word-break: break-word;
     overflow-wrap: break-word;
 }
 
 .form-actions { display: flex; gap: 15px; margin-top: 15px; } .form-actions button { flex: 1; }
 
-/* === DASHBOARD GRID (O Ajuste de Largura) === */
+/* === DASHBOARD GRID === */
 .dashboard-grid {
   display: grid;
   width: 100%;
   gap: 24px; 
   padding: 10px 0;
-  grid-template-columns: 1fr; /* Mobile: 1 coluna */
+  grid-template-columns: 1fr; 
 }
 
-/* Tablet e Desktop: 2 Colunas LARGAS */
 @media (min-width: 768px) { 
-  .dashboard-grid { 
-    grid-template-columns: 1fr 1fr; 
-  } 
+  .dashboard-grid { grid-template-columns: 1fr 1fr; } 
 }
 
-/* Telas Gigantes: 3 Colunas */
 @media (min-width: 1600px) { 
-  .dashboard-grid { 
-    grid-template-columns: repeat(3, 1fr); 
-  } 
+  .dashboard-grid { grid-template-columns: repeat(3, 1fr); } 
 }
 
 .menu-card {
   background: var(--card-bg);
-  /* Removi o backdrop-filter fixo para usar a cor do tema */
   border: 1px solid var(--border);
   border-radius: 20px; 
   padding: 30px; 
@@ -183,7 +173,7 @@ input::placeholder { color: #64748b; }
 
 .menu-card:hover { 
     transform: translateY(-5px); 
-    border-color: var(--hover-color); /* Usa a cor do ícone no hover */
+    border-color: var(--hover-color);
     box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
 }
 
@@ -204,21 +194,19 @@ input::placeholder { color: #64748b; }
 .strength-weak { width: 33%; background-color: #ef4444; } .strength-medium { width: 66%; background-color: #f59e0b; } .strength-strong { width: 100%; background-color: #10b981; }
 .strength-text { font-size: 0.75rem; margin-top: 4px; text-align: right; font-weight: 600; font-family: var(--font-display); }
 
-/* Splash Screen (Restaurado) */
-/* --- CORREÇÃO DA SPLASH SCREEN (BLINDADA) --- */
+/* Splash Screen */
 .splash-screen-container {
   position: fixed;
-  inset: 0; /* Garante topo, esquerda, direita e fundo 0 */
+  inset: 0;
   width: 100%;
   height: 100%;
-  /* Define a cor DIRETAMENTE aqui, ignorando variáveis por segurança no load */
   background-color: #020617; 
   background-image: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 99999; /* Z-index altíssimo */
+  z-index: 99999;
 }
 .splash-svg { width: 160px; height: 160px; filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.4)); margin-bottom: 24px; }
 .splash-path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: drawLines 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
@@ -231,11 +219,11 @@ input::placeholder { color: #64748b; }
 .btn-enter-system:hover { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 25px rgba(139, 92, 246, 0.5); transform: translateY(-3px) scale(1.02); }
 @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-/* --- CORREÇÃO DO TECLADO NO iOS (PWA) --- */
+/* Fix iOS */
 input, textarea, select, [contenteditable] { -webkit-user-select: text !important; user-select: text !important; font-size: 16px !important; transform: translate3d(0, 0, 0); }
 button, a, input, textarea { touch-action: manipulation; }
 
-/* Animações Globais */
+/* Animações */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .spin-animation { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
