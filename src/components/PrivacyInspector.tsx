@@ -27,59 +27,95 @@ export default function PrivacyInspector({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        // Tenta buscar dados. Se falhar (AdBlock ou Erro), cai no catch e networkData fica null.
-        const response = await fetch('https://ipapi.co/json/');
-        if (!response.ok) throw new Error("Falha na API");
-        
-        const json = await response.json();
-        
-        // Validação extra: Se veio JSON mas sem IP, considera falha
-        if (!json.ip) throw new Error("Dados vazios");
+      setLoading(true); // Garante que o loading inicia
 
-        setNetworkData({
-            ip: json.ip,
-            city: json.city,
-            region: json.region,
-            country_name: json.country_name,
-            org: json.org,
-            latitude: json.latitude,
-            longitude: json.longitude
-        });
+      // 1. TENTATIVA DE OBTER DADOS DE REDE (COM FALLBACK)
+      try {
+        let data = null;
+
+        // Tentativa 1: ipapi.co (Mais precisa, mas limita requisições)
+        try {
+            const res1 = await fetch('https://ipapi.co/json/');
+            if (res1.ok) {
+                const json1 = await res1.json();
+                if (json1.ip) {
+                    data = {
+                        ip: json1.ip,
+                        city: json1.city,
+                        region: json1.region,
+                        country_name: json1.country_name,
+                        org: json1.org,
+                        latitude: json1.latitude,
+                        longitude: json1.longitude
+                    };
+                }
+            }
+        } catch (e) { console.warn("API 1 falhou, tentando API 2..."); }
+
+        // Tentativa 2: ipwho.is (Se a 1 falhar - Sem limite estrito, boa para fallback)
+        if (!data) {
+            try {
+                const res2 = await fetch('https://ipwho.is/');
+                if (res2.ok) {
+                    const json2 = await res2.json();
+                    if (json2.success) {
+                        data = {
+                            ip: json2.ip,
+                            city: json2.city,
+                            region: json2.region,
+                            country_name: json2.country,
+                            org: json2.connection?.isp || json2.connection?.org,
+                            latitude: json2.latitude,
+                            longitude: json2.longitude
+                        };
+                    }
+                }
+            } catch (e) { console.warn("API 2 falhou."); }
+        }
+
+        setNetworkData(data); // Define dados ou null se tudo falhar
+
       } catch (error) {
-        console.error("Rastreamento bloqueado ou falha na API:", error);
-        setNetworkData(null); // Garante que é null se falhar
+        console.error("Erro geral no inspector:", error);
+        setNetworkData(null);
       }
 
-      // Dados do dispositivo sempre conseguimos pegar localmente
-      const ua = navigator.userAgent;
-      let os = "Desconhecido";
-      if (ua.indexOf("Win") !== -1) os = "Windows";
-      if (ua.indexOf("Mac") !== -1) os = "macOS";
-      if (ua.indexOf("Linux") !== -1) os = "Linux";
-      if (ua.indexOf("Android") !== -1) os = "Android";
-      if (ua.indexOf("iPhone") !== -1) os = "iOS";
+      // 2. DADOS DO DISPOSITIVO (SEMPRE DISPONÍVEIS LOCALMENTE)
+      try {
+          const ua = navigator.userAgent;
+          let os = "Desconhecido";
+          if (ua.indexOf("Win") !== -1) os = "Windows";
+          if (ua.indexOf("Mac") !== -1) os = "macOS";
+          if (ua.indexOf("Linux") !== -1) os = "Linux";
+          if (ua.indexOf("Android") !== -1) os = "Android";
+          if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS";
 
-      let browser = "Desconhecido";
-      if (ua.indexOf("Chrome") !== -1) browser = "Google Chrome";
-      if (ua.indexOf("Firefox") !== -1) browser = "Mozilla Firefox";
-      if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Apple Safari";
-      if (ua.indexOf("Edg") !== -1) browser = "Microsoft Edge";
-      if (ua.indexOf("OPR") !== -1) browser = "Opera";
+          let browser = "Desconhecido";
+          if (ua.indexOf("Firefox") !== -1) browser = "Mozilla Firefox";
+          else if (ua.indexOf("SamsungBrowser") !== -1) browser = "Samsung Internet";
+          else if (ua.indexOf("Opera") !== -1 || ua.indexOf("OPR") !== -1) browser = "Opera";
+          else if (ua.indexOf("Trident") !== -1) browser = "Internet Explorer";
+          else if (ua.indexOf("Edg") !== -1) browser = "Microsoft Edge";
+          else if (ua.indexOf("Chrome") !== -1) browser = "Google Chrome";
+          else if (ua.indexOf("Safari") !== -1) browser = "Apple Safari";
 
-      setDeviceData({
-          browser: browser,
-          os: os,
-          screen: `${window.screen.width}x${window.screen.height}`,
-          language: navigator.language.toUpperCase(),
-          userAgent: ua
-      });
-
-      setLoading(false);
+          setDeviceData({
+              browser: browser,
+              os: os,
+              screen: `${window.screen.width}x${window.screen.height}`,
+              language: navigator.language.toUpperCase(),
+              userAgent: ua
+          });
+      } catch (e) {
+          console.error("Erro ao ler dispositivo");
+      } finally {
+          // 3. FINALIZA O LOADING (GARANTIDO)
+          // Pequeno delay para a animação não piscar muito rápido
+          setTimeout(() => setLoading(false), 800);
+      }
     };
 
-    // Pequeno delay para dar sensação de scan
-    setTimeout(fetchData, 1500);
+    fetchData();
   }, []);
 
   return (
@@ -114,9 +150,9 @@ export default function PrivacyInspector({ onBack }: { onBack: () => void }) {
       ) : (
         <div style={{ animation: 'fadeIn 0.5s ease' }}>
             
-            {/* CORREÇÃO DO CARD DE ALERTA: Lógica Condicional */}
+            {/* ALERTA DE EXPOSIÇÃO */}
             {networkData && networkData.ip ? (
-                /* CASO 1: DADOS EXPOSTOS (IP Encontrado) */
+                /* CASO 1: DADOS ENCONTRADOS (EXPOSTO) */
                 <div className="card" style={{ marginBottom: '30px', borderLeft: '4px solid #f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}>
                     <div style={{ display: 'flex', gap: 15, alignItems: 'flex-start' }}>
                         <Eye size={24} color="#f59e0b" style={{ flexShrink: 0, marginTop: 4 }} />
@@ -129,14 +165,14 @@ export default function PrivacyInspector({ onBack }: { onBack: () => void }) {
                     </div>
                 </div>
             ) : (
-                /* CASO 2: DADOS PROTEGIDOS OU FALHA (IP Não Encontrado) */
+                /* CASO 2: DADOS NÃO ENCONTRADOS (PROTEGIDO) */
                 <div className="card" style={{ marginBottom: '30px', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.05)' }}>
                     <div style={{ display: 'flex', gap: 15, alignItems: 'flex-start' }}>
                         <Shield size={24} color="#10b981" style={{ flexShrink: 0, marginTop: 4 }} />
                         <div>
-                            <h3 style={{ margin: '0 0 5px 0', color: '#10b981' }}>Rastreamento Não Detectado</h3>
+                            <h3 style={{ margin: '0 0 5px 0', color: '#10b981' }}>Rastreamento Bloqueado</h3>
                             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                Não conseguimos capturar seu IP ou localização. Isso indica que você pode estar usando um bloqueador eficiente ou a conexão de rastreamento falhou. <strong>Sua privacidade está preservada neste teste.</strong>
+                                Excelente! Não conseguimos detectar seu IP ou localização. Você provavelmente está usando uma VPN, Proxy ou navegador com forte proteção de privacidade.
                             </p>
                         </div>
                     </div>
@@ -155,7 +191,7 @@ export default function PrivacyInspector({ onBack }: { onBack: () => void }) {
                         <div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Endereço IP Público</div>
                             <div style={{ fontSize: '1.8rem', fontWeight: 700, color: networkData?.ip ? 'var(--text-color)' : '#64748b', fontFamily: 'monospace' }}>
-                                {networkData?.ip || 'Oculto / Desconhecido'}
+                                {networkData?.ip || 'Oculto / Protegido'}
                             </div>
                         </div>
 
