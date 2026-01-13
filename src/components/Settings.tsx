@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { encryptData, decryptData } from '../utils/security';
-import { ArrowLeft, Save, Download, Trash2, Key, Loader2, ShieldAlert, Sun, Moon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Download, Trash2, Key, Loader2, ShieldAlert, AlertTriangle } from 'lucide-react';
 import '../App.css';
 
 interface SettingsProps {
@@ -9,7 +9,6 @@ interface SettingsProps {
   onPanicExecute: (pin: string) => Promise<void>;
 }
 
-// ... (AuthModal permanece igual) ...
 const AuthModal = ({ isOpen, onClose, onConfirm, title, message, isDestructive = false }: any) => {
     const [pin, setPin] = useState('');
     if (!isOpen) return null;
@@ -38,7 +37,6 @@ const AuthModal = ({ isOpen, onClose, onConfirm, title, message, isDestructive =
 export default function Settings({ onBack, onPanicExecute }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<'general' | 'danger'>('general');
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState('dark');
 
   // Modais
   const [showBackupAuth, setShowBackupAuth] = useState(false);
@@ -48,19 +46,6 @@ export default function Settings({ onBack, onPanicExecute }: SettingsProps) {
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
-
-  useEffect(() => {
-      const savedTheme = localStorage.getItem('app_theme') || 'dark';
-      setTheme(savedTheme);
-      document.body.className = savedTheme;
-  }, []);
-
-  const toggleTheme = () => {
-      const nextTheme = theme === 'dark' ? 'light' : 'dark';
-      setTheme(nextTheme);
-      localStorage.setItem('app_theme', nextTheme);
-      document.body.className = nextTheme;
-  };
 
   const handleChangePin = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -159,17 +144,6 @@ export default function Settings({ onBack, onPanicExecute }: SettingsProps) {
       {activeTab === 'general' ? (
           <div style={{ animation: 'fadeIn 0.3s' }}>
               
-              {/* TEMA */}
-              <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                      <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.2rem' }}>{theme === 'light' ? <Sun size={20} color="#f59e0b" /> : <Moon size={20} color="#8b5cf6" />} Aparência</h3>
-                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>Modo {theme === 'light' ? 'Claro' : 'Escuro'} ativo.</p>
-                  </div>
-                  <button onClick={toggleTheme} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '10px', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-color)' }}>
-                      Trocar Tema
-                  </button>
-              </div>
-
               {/* TROCAR PIN */}
               <div className="card" style={{ marginBottom: 20 }}>
                   <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.2rem' }}><Key size={20} color="#f59e0b" /> Alterar PIN Mestre</h3>

@@ -14,19 +14,16 @@ import Settings from './Settings';
 import SplashScreen from './SplashScreen';
 import '../App.css';
 
-// --- INTERFACE DO RELATÓRIO ATUALIZADA ---
 interface AuditData {
   date: string; 
   totalVaultItems: number; 
   totalCards: number; 
   totalDocuments: number; 
   totalNotes: number; 
-  totalTokens: number; // <--- NOVO: Contagem de 2FA
-  
+  totalTokens: number;
   weakCount: number; 
   reusedCount: number; 
   totalCompromised: number;
-  
   details: { 
       weakSites: string[]; 
       reusedGroups: { passwordHash: string, sites: string[] }[]; 
@@ -36,9 +33,7 @@ interface AuditData {
 
 const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: () => void, onDownload: () => void }) => {
   return (
-    <div style={{ width: '100%', animation: 'fadeIn 0.3s ease', paddingBottom: '40px' }}>
-      
-      {/* HEADER */}
+    <div className="main-content" style={{ paddingBottom: '40px', animation: 'fadeIn 0.3s ease' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
             <h2 style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: 'var(--text-color)' }}>Relatório de <span style={{ color: data.score > 70 ? '#10b981' : '#ef4444' }}>Segurança</span></h2>
@@ -49,7 +44,6 @@ const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: 
         </button>
       </div>
 
-      {/* SCORE CARD */}
       <div className="card" style={{ textAlign: 'center', padding: '40px', marginBottom: '30px', background: `linear-gradient(180deg, ${data.score > 70 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'} 0%, rgba(15, 23, 42, 0) 100%)`, border: `1px solid ${data.score > 70 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
         <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="120" height="120" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
@@ -67,7 +61,6 @@ const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: 
         </button>
       </div>
 
-      {/* SEÇÃO 1: INVENTÁRIO (AGORA COM 2FA) */}
       <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Inventário Digital</h3>
       <div className="dashboard-grid" style={{ marginBottom: '30px', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
         <div className="card" style={{ textAlign: 'center', padding: '20px 10px' }}>
@@ -92,11 +85,8 @@ const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: 
         </div>
       </div>
 
-      {/* SEÇÃO 2: VULNERABILIDADES */}
       <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Análise de Risco</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-        
-        {/* CARD FALTA DE 2FA (NOVO) */}
         <div className="card" style={{ borderColor: data.totalTokens === 0 ? '#ef4444' : 'var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                 <div style={{ background: data.totalTokens === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', padding: 8, borderRadius: '50%' }}>
@@ -106,14 +96,13 @@ const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: 
             </div>
             {data.totalTokens === 0 ? (
                 <p style={{ fontSize: '0.9rem', color: '#fca5a5', marginBottom: '5px' }}>
-                    <strong>Crítico:</strong> Você não configurou nenhum token 2FA. Se sua senha vazar, sua conta estará exposta. Adicione tokens para Google, Instagram, etc.
+                    <strong>Crítico:</strong> Você não configurou nenhum token 2FA. Se sua senha vazar, sua conta estará exposta.
                 </p>
             ) : (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Você tem {data.totalTokens} contas protegidas com 2FA. Excelente!</p>
             )}
         </div>
 
-        {/* CARD SENHAS FRACAS */}
         <div className="card" style={{ borderColor: data.weakCount > 0 ? '#f59e0b' : 'var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                 <div style={{ background: data.weakCount > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', padding: 8, borderRadius: '50%' }}>
@@ -134,7 +123,6 @@ const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: 
             )}
         </div>
 
-        {/* CARD SENHAS REPETIDAS */}
         <div className="card" style={{ borderColor: data.reusedCount > 0 ? '#ef4444' : 'var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                  <div style={{ background: data.reusedCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', padding: 8, borderRadius: '50%' }}>
@@ -155,13 +143,11 @@ const AuditInsights = ({ data, onBack, onDownload }: { data: AuditData, onBack: 
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Todas as suas senhas são únicas.</p>
             )}
         </div>
-
       </div>
     </div>
   );
 };
 
-// ... (ToolCard e StatusBadge permanecem iguais) ...
 const ToolCard = ({ icon: Icon, title, desc, onClick, glowColor }: any) => (
   <div onClick={onClick} className="menu-card" style={{ ['--hover-color' as any]: glowColor }}>
     <div className="icon-wrapper" style={{ backgroundColor: `${glowColor}15`, color: glowColor }}>
@@ -179,7 +165,6 @@ const StatusBadge = ({ count, label, color }: any) => (
   </div>
 );
 
-// ... (Modais permanecem iguais, mantendo Auth e Panic) ...
 const PinModal = ({ isOpen, onClose, onConfirm, loading }: any) => {
   const [pin, setPin] = useState('');
   if (!isOpen) return null;
@@ -193,15 +178,12 @@ const PinModal = ({ isOpen, onClose, onConfirm, loading }: any) => {
   );
 };
 
-// ... (Dashboard Principal) ...
 export default function Dashboard() {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-
   const [stats, setStats] = useState({ vault: 0, wallet: 0, notes: 0 });
   const [securityScore, setSecurityScore] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
-
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
   const [auditData, setAuditData] = useState<AuditData | null>(null);
@@ -227,7 +209,6 @@ export default function Dashboard() {
       const { data: vaultItems } = await supabase.from('vault_items').select('*');
       const { data: walletItems } = await supabase.from('wallet_items').select('*');
       const { data: notesItems } = await supabase.from('secure_notes').select('*');
-      // NOVA BUSCA: 2FA Tokens
       const { data: tokenItems } = await supabase.from('auth_tokens').select('*');
 
       if (!vaultItems || vaultItems.length === 0) throw new Error("Cofre vazio.");
@@ -244,21 +225,16 @@ export default function Dashboard() {
         if (pass) { if (pass.length < 8) weakCount++; if (!passwordMap[pass]) passwordMap[pass] = []; passwordMap[pass].push(item.site_name); }
       });
       let reusedGroups: { passwordHash: string, sites: string[] }[] = [];
-      let reusedCount = 0; let totalCompromised = 0;
-      Object.entries(passwordMap).forEach(([pass, sites]) => { if (sites.length > 1) { reusedCount++; totalCompromised += sites.length; reusedGroups.push({ passwordHash: pass.length + 'x', sites }); } });
+      let reusedCount = 0; 
+      Object.entries(passwordMap).forEach(([pass, sites]) => { if (sites.length > 1) { reusedCount++; reusedGroups.push({ passwordHash: pass.length + 'x', sites }); } });
       const realWalletItems = walletItems ? walletItems.filter(i => i.type !== 'verifier') : [];
       const cardsCount = realWalletItems.filter(i => i.type === 'card').length; const docsCount = realWalletItems.filter(i => i.type === 'document').length; const notesCount = notesItems ? notesItems.length : 0;
-      
-      // NOVA CONTAGEM DE TOKENS
       const tokensCount = tokenItems ? tokenItems.length : 0;
 
       let auditScore = 100; 
       auditScore -= (weakCount * 10); 
       auditScore -= (reusedCount * 15); 
-      
-      // PENALIDADE POR FALTA DE 2FA
       if (tokensCount === 0) auditScore -= 20;
-
       if (auditScore < 0) auditScore = 0;
       
       setAuditData({ 
@@ -267,8 +243,8 @@ export default function Dashboard() {
           totalCards: cardsCount, 
           totalDocuments: docsCount, 
           totalNotes: notesCount, 
-          totalTokens: tokensCount, // <--- Add
-          weakCount, reusedCount, totalCompromised, 
+          totalTokens: tokensCount, 
+          weakCount, reusedCount, totalCompromised: 0, 
           score: auditScore, 
           details: { weakSites: realVaultItems.filter(i => { const p = decryptData(i.password_encrypted, masterPin); return p && p.length < 8; }).map(i => i.site_name), reusedGroups } 
       });
@@ -278,14 +254,12 @@ export default function Dashboard() {
 
   const handleDownloadTxt = () => {
     if (!auditData) return;
-    // Relatório TXT Atualizado
     const content = `RELATÓRIO DE AUDITORIA ARGUS ONE\nData: ${auditData.date}\nScore: ${auditData.score}/100\n\n[ INVENTÁRIO ]\n- Senhas: ${auditData.totalVaultItems}\n- Cartões: ${auditData.totalCards}\n- Docs: ${auditData.totalDocuments}\n- Notas: ${auditData.totalNotes}\n- Tokens 2FA: ${auditData.totalTokens}\n\n[ VULNERABILIDADES ]\n- Senhas Fracas: ${auditData.weakCount}\n- Senhas Repetidas: ${auditData.reusedCount}\n- 2FA Configurado: ${auditData.totalTokens > 0 ? 'SIM' : 'NÃO (Crítico)'}\n\nGerado localmente.`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `Argus_Audit_${Date.now()}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  // Função de Pânico passada como prop para Settings
   const handleEmergencyWipe = async (masterPin: string) => {
     setLoadingAction(true);
     try {
@@ -317,7 +291,7 @@ export default function Dashboard() {
   if (activeTool === 'wallet') return <DigitalWallet onBack={() => setActiveTool(null)} />;
 
   return (
-    <div style={{ width: '100%', paddingBottom: '60px' }}>
+    <div className="main-content" style={{ paddingBottom: '60px' }}>
       <PinModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onConfirm={handleRunAudit} loading={loadingAction} />
       
       <div style={{ marginBottom: '30px', textAlign: 'center' }}>
@@ -354,7 +328,6 @@ export default function Dashboard() {
         <ToolCard icon={GraduationCap} title="Academia Anti-Golpe" desc="Aprenda a identificar fraudes." glowColor="#f59e0b" onClick={() => setActiveTool('edu_quiz')} />
         <ToolCard icon={SettingsIcon} title="Configurações" desc="Backup e Protocolos." glowColor="#94a3b8" onClick={() => setActiveTool('settings')} />
       </div>
-
     </div>
   );
 }
