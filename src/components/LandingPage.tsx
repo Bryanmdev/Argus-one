@@ -108,8 +108,8 @@ export default function LandingPage({ onStart }: LandingPageProps) {
       <footer style={{ padding: '40px 20px', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>ArgusOne © 2026 • Segurança em primeiro lugar.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', alignItems: 'center' }}>
-            <a href="https://linkedin.com/in/Bryanmdev" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', transition: 'color 0.2s' }}><Linkedin size={18} /></a>
-            <a href="https://github.com/bryan-miraanda" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', transition: 'color 0.2s' }}><Github size={18} /></a>
+            <a href="https://linkedin.com/in/bryan-miraanda" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', transition: 'color 0.2s' }}><Linkedin size={18} /></a>
+            <a href="https://github.com/Bryanmdev" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', transition: 'color 0.2s' }}><Github size={18} /></a>
         </div>
       </footer>
     </div>
